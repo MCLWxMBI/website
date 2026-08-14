@@ -1,0 +1,16 @@
+{
+  "name": "Node 24",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "node",
+  "postCreateCommand": "npm install --global @openai/codex",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "openai.chatgpt"
+      ]
+    }
+  }
+}
