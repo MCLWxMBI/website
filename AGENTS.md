@@ -7,6 +7,7 @@ intended for any coding agent working in it.
 ## Project map
 
 - `app/` contains the client application, pages, components, styles, and local prototype data.
+- `docs/design.md` is the canonical product and interface design reference.
 - `server/` is reserved for Nitro server code.
 - `public/` contains files served unchanged.
 - `nuxt.config.ts` configures Nuxt and the Cloudflare Nitro preset.
@@ -23,6 +24,7 @@ converted copies of it unless explicitly requested.
 - Prefer typed Vue components and explicit domain types over untyped objects.
 - Keep components focused: pages coordinate data and routing, while reusable display and form behavior belongs in components.
 - Maintain responsive, keyboard-accessible interfaces with visible focus states and semantic HTML.
+- Read `.agents/design.md` before changing user-interface behavior or styling.
 - Do not add a library when the existing stack can solve the task cleanly.
 - Never deploy, generate credentials, or change Cloudflare resources unless the user explicitly asks.
 
@@ -32,4 +34,6 @@ Before handing off a code change, run the smallest relevant checks and always
 run `npm run build` for changes to application code or configuration. Report
 checks that could not be run and why.
 
-See [`.agents/commands.md`](.agents/commands.md) for the canonical commands and their side effects.
+See [`.agents/commands.md`](.agents/commands.md) for the canonical commands and
+their side effects, and [`.agents/design.md`](.agents/design.md) for the
+required design workflow.
