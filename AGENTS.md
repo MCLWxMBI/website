@@ -1,0 +1,35 @@
+# Repository agent guide
+
+This repository is a Nuxt 4, Vue 3, and TypeScript application deployed as a
+Cloudflare Worker. These instructions apply to the whole repository and are
+intended for any coding agent working in it.
+
+## Project map
+
+- `app/` contains the client application, pages, components, styles, and local prototype data.
+- `server/` is reserved for Nitro server code.
+- `public/` contains files served unchanged.
+- `nuxt.config.ts` configures Nuxt and the Cloudflare Nitro preset.
+- `wrangler.jsonc` configures the deployed Cloudflare Worker.
+- `package.json` and `package-lock.json` are the canonical dependency files.
+
+The product proposal is retained as source material. Do not generate or commit
+converted copies of it unless explicitly requested.
+
+## Working expectations
+
+- Inspect relevant code before editing and preserve unrelated user changes.
+- Use npm and keep `package-lock.json` in sync when dependencies change.
+- Prefer typed Vue components and explicit domain types over untyped objects.
+- Keep components focused: pages coordinate data and routing, while reusable display and form behavior belongs in components.
+- Maintain responsive, keyboard-accessible interfaces with visible focus states and semantic HTML.
+- Do not add a library when the existing stack can solve the task cleanly.
+- Never deploy, generate credentials, or change Cloudflare resources unless the user explicitly asks.
+
+## Verification
+
+Before handing off a code change, run the smallest relevant checks and always
+run `npm run build` for changes to application code or configuration. Report
+checks that could not be run and why.
+
+See [`.agents/commands.md`](.agents/commands.md) for the canonical commands and their side effects.

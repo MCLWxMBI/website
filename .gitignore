@@ -27,3 +27,7 @@ logs
 .wrangler
 .dev.vars*
 !.dev.vars.example
+
+# Others
+*.pdf
+*.docx
