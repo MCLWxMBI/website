@@ -1,0 +1,137 @@
+# ECHO design guide
+
+> **Status:** Stakeholder review is pending.
+
+## Visual direction
+
+### Brand
+
+- The product name is **ECHO**.
+- The leaf line mark communicates environment and growth without relying on
+  photography or decorative illustration.
+- The expanded label “Environmental consultations” can accompany the brand on
+  larger screens. The compact mobile header uses ECHO alone.
+- The visual tone is modern SaaS with restrained environmental and civic cues:
+  structured cards, strong hierarchy, generous whitespace, soft borders, and
+  deep green accents.
+
+### Colour
+
+The implemented CSS variables in `app/assets/css/main.css` are the source of
+truth. Their intended roles are:
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--ink` | `#14251f` | Primary text |
+| `--muted` | `#64716c` | Secondary text |
+| `--line` | `#dce5e0` | Borders and dividers |
+| `--surface` | `#ffffff` | Cards and primary surfaces |
+| `--soft` | `#f4f7f5` | Subtle controls and backgrounds |
+| `--green-900` | `#0c3f33` | Hero, dark brand surfaces |
+| `--green-700` | `#12634e` | Links, controls, primary actions |
+| `--green-100` | `#dcf5e9` | Soft positive accents |
+| `--lime` | `#cce85a` | Selective hero and logo highlight |
+
+Lime is an accent, not a general background or body-text colour. Status must not
+be communicated by colour alone: every status treatment includes a written
+label.
+
+### Typography
+
+- **Manrope** is used for headings, important dates, and the ECHO wordmark.
+- **DM Sans** is used for body copy, controls, labels, and supporting content.
+- Headings use tight tracking and strong weights to establish the product-like
+  character. Body copy uses comfortable line height and muted colour.
+- The CSS imports both families from Google Fonts and provides system fallbacks.
+  If font delivery changes, preserve the two-font hierarchy or choose a close
+  geometric heading and neutral sans-serif body pairing.
+
+### Shape, spacing, and depth
+
+- Content is constrained to a maximum width of 1180px with 24px desktop side
+  margins and 16px mobile side margins.
+- Major cards use 13–18px corner radii. Controls use 6–12px radii. Status badges
+  use pill shapes.
+- Borders are preferred over shadows for default separation. Shadows and a
+  three-pixel lift appear on opportunity-card hover.
+- Spacing should remain open and regular. Avoid dense dashboard layouts or
+  introducing unrelated decorative patterns.
+
+## Pages and components
+
+### Shared shell
+
+The header contains the ECHO brand and a single Opportunities navigation item.
+The footer repeats the brand, product purpose, and pilot jurisdiction.
+
+### Opportunity catalogue
+
+The homepage has two visual zones:
+
+- A dark-green hero introduces ECHO, highlights “shape change” in lime, and
+  contains the primary search field. The dot texture and outlined circles add
+  depth without competing with the content.
+- A pale catalogue surface contains the result count, filters, opportunity
+  cards, empty state, and numbered pagination.
+
+On desktop, filters occupy a sticky 230px left sidebar and cards appear in three
+columns. The grid falls to two columns below 1050px. Below 760px, cards use one
+column and filters move into a right-side modal drawer.
+
+Search covers titles, summaries, publishers, jurisdictions, and categories.
+Filters cover location, category, and status. Search and filter state is encoded
+in URL query parameters so views can be shared and restored. Empty results must
+explain what happened and provide a clear reset action.
+
+### Opportunity card
+
+Cards use a consistent information order:
+
+1. Status and jurisdiction.
+2. Publishing organisation.
+3. Opportunity title and concise summary.
+4. Up to two category tags.
+5. Relevant date and a clear detail-page affordance.
+
+The whole hierarchy should make the title and deadline scannable before
+supporting details. Status labels are “Open now”, “Upcoming”, and “Closed”.
+
+### Opportunity detail
+
+The detail route is `/opportunities/[id]`. The main column contains status,
+jurisdiction, publisher, title, summary, categories, and consultation
+description. A sticky desktop sidebar gives the opening/closing dates and a
+primary link to the official consultation.
+
+ECHO links to the publisher’s original page rather than storing downloadable
+documents. The detail page intentionally does not display public contact
+details or a documents section. On mobile, the deadline and official-source
+action move above the main description.
+
+## Interaction and accessibility
+
+- All interactive elements must remain keyboard operable with a visible focus
+  ring. Use semantic buttons, links, labels, fieldsets, and headings.
+- External consultation links open in a new tab, include `rel="noopener"`, and
+  explain that the user is leaving ECHO.
+- Controls require accessible names; icon-only controls require explicit
+  `aria-label` text.
+- Text and essential controls must meet WCAG AA contrast. Never rely on hover,
+  colour, or an icon alone to convey state.
+- Respect `prefers-reduced-motion`. Motion should be short and functional.
+- Preserve the current breakpoint behavior unless a changed layout is tested at
+  desktop, tablet, and narrow-mobile widths.
+
+## Implementation reference
+
+- Global tokens and responsive rules: `app/assets/css/main.css`
+- Shared page chrome: `app/layouts/default.vue`
+- Catalogue page and URL state: `app/pages/index.vue`
+- Detail page: `app/pages/opportunities/[id].vue`
+- Reusable catalogue UI: `app/components/`
+- Opportunity schema and allowed values: `app/types/opportunity.ts`
+
+Before changing the interface, check whether the change alters a documented
+principle, component contract, responsive behavior, or product boundary. Keep
+the code and this guide aligned, reuse existing tokens and patterns, and verify
+the production build plus the affected desktop and mobile states.
