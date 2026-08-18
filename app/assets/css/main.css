@@ -132,6 +132,15 @@ main { flex: 1; }
 .detail-section { margin-top: 36px; padding-top: 30px; border-top: 1px solid var(--line); }
 .detail-section h2 { margin: 0 0 18px; font: 700 20px 'Manrope'; }
 .detail-section p { color: #4f5d57; font-size: 15px; line-height: 1.8; }
+.map-section h2 { margin-bottom: 6px; }
+.map-location-label { margin: 0 0 16px; color: var(--muted); font-size: 13px !important; }
+.opportunity-map, .map-loading { width: 100%; height: 380px; border: 1px solid var(--line); border-radius: 13px; overflow: hidden; background: #e9efec; }
+.opportunity-map { z-index: 0; font-family: 'DM Sans', system-ui, sans-serif; }
+.map-loading { display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+.opportunity-map .leaflet-control-attribution { font-size: 9px; }
+.echo-map-marker-wrapper { background: transparent; border: 0; }
+.echo-map-marker { width: 32px; height: 32px; display: grid; place-items: center; border: 3px solid white; border-radius: 50% 50% 50% 0; background: var(--green-700); box-shadow: 0 4px 12px rgba(12, 63, 51, .35); transform: rotate(-45deg); }
+.echo-map-marker > span { width: 10px; height: 10px; border-radius: 50%; background: var(--lime); }
 .detail-sidebar { position: sticky; top: 25px; }
 .deadline-card { margin-bottom: 15px; padding: 25px; color: white; background: var(--green-900); border-radius: 14px; }
 .deadline-card.upcoming { background: #6a4c12; }
@@ -181,6 +190,7 @@ main { flex: 1; }
   .detail-main { padding: 29px 23px; }
   .detail-main h1 { font-size: 34px; }
   .detail-lead { font-size: 17px; }
+  .opportunity-map, .map-loading { height: 300px; }
   .detail-sidebar { width: 100%; position: static; order: -1; }
   .footer-inner { align-items: flex-start; gap: 20px; flex-direction: column; }
 }

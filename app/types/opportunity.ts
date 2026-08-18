@@ -13,6 +13,28 @@ export const opportunityCategories = [
 ] as const
 export type OpportunityCategory = typeof opportunityCategories[number]
 
+export type GeoPosition = [longitude: number, latitude: number]
+
+export interface PointGeometry {
+  type: 'Point'
+  coordinates: GeoPosition
+}
+
+export interface PolygonGeometry {
+  type: 'Polygon'
+  coordinates: GeoPosition[][]
+}
+
+export interface MultiPolygonGeometry {
+  type: 'MultiPolygon'
+  coordinates: GeoPosition[][][]
+}
+
+export interface OpportunityLocation {
+  label: string
+  geometry: PointGeometry | PolygonGeometry | MultiPolygonGeometry
+}
+
 export interface Opportunity {
   id: string
   title: string
@@ -25,4 +47,5 @@ export interface Opportunity {
   closeDate: string
   tags: OpportunityCategory[]
   status: OpportunityStatus
+  location?: OpportunityLocation
 }
