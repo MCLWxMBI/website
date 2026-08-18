@@ -1,7 +1,7 @@
 # Repository agent guide
 
-This repository is a Nuxt 4, Vue 3, and TypeScript application deployed as a
-Cloudflare Worker. These instructions apply to the whole repository and are
+This repository is a Nuxt 4, Vue 3, and TypeScript application deployed with
+server-side rendering on Netlify Functions. These instructions apply to the whole repository and are
 intended for any coding agent working in it.
 
 ## Project map
@@ -10,8 +10,8 @@ intended for any coding agent working in it.
 - `docs/design.md` is the canonical product and interface design reference.
 - `server/` is reserved for Nitro server code.
 - `public/` contains files served unchanged.
-- `nuxt.config.ts` configures Nuxt and the Cloudflare Nitro preset.
-- `wrangler.jsonc` configures the deployed Cloudflare Worker.
+- `nuxt.config.ts` configures Nuxt and the Netlify Nitro preset.
+- `netlify.toml` defines the Git-based Netlify build and publish settings.
 - `package.json` and `package-lock.json` are the canonical dependency files.
 
 The product proposal is retained as source material. Do not generate or commit
@@ -26,7 +26,8 @@ converted copies of it unless explicitly requested.
 - Maintain responsive, keyboard-accessible interfaces with visible focus states and semantic HTML.
 - Read `.agents/design.md` before changing user-interface behavior or styling.
 - Do not add a library when the existing stack can solve the task cleanly.
-- Never deploy, generate credentials, or change Cloudflare resources unless the user explicitly asks.
+- Store runtime secrets in Netlify with Functions scope, never in `netlify.toml`.
+- Never deploy, generate credentials, or change Netlify resources unless the user explicitly asks.
 
 ## Verification
 

@@ -9,7 +9,8 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "openai.chatgpt"
+        "openai.chatgpt",
+        "vue.volar"
       ]
     }
   }
