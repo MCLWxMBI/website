@@ -13,13 +13,8 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    preset: "cloudflare_module",
-
-    cloudflare: {
-      deployConfig: true,
-      nodeCompat: true
-    }
+    preset: 'netlify'
   },
 
-  modules: ["nitro-cloudflare-dev"]
+  modules: ['@netlify/nuxt']
 })
