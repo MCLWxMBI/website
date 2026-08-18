@@ -12,6 +12,13 @@ export default defineNuxtConfig({
     }
   },
 
+  runtimeConfig: {
+    public: {
+      mapTileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      mapAttribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }
+  },
+
   nitro: {
     preset: 'netlify'
   },

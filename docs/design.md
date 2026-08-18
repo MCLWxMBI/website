@@ -108,6 +108,21 @@ documents. The detail page intentionally does not display public contact
 details or a documents section. On mobile, the deadline and official-source
 action move above the main description.
 
+### Geographic map
+
+When an opportunity has geographic data, its detail page shows an “Area
+affected” map after the consultation description. The map begins with an
+Australia-wide view before focusing on the supplied geometry. Point locations
+use a deep-green ECHO marker with a lime centre; Polygon and MultiPolygon areas
+use a deep-green outline and translucent green fill.
+
+Maps are 380px high on larger screens and 300px high below the 760px mobile
+breakpoint. Scroll-wheel zoom is disabled so the page remains easy to scroll,
+while visible zoom controls, dragging, touch interaction, and keyboard focus
+remain available. The readable location label and map attribution must always
+be visible. Opportunities without geographic data do not show an empty map
+section.
+
 ## Interaction and accessibility
 
 - All interactive elements must remain keyboard operable with a visible focus
@@ -129,6 +144,7 @@ action move above the main description.
 - Catalogue page and URL state: `app/pages/index.vue`
 - Detail page: `app/pages/opportunities/[id].vue`
 - Reusable catalogue UI: `app/components/`
+- Client-only opportunity map: `app/components/OpportunityMap.client.vue`
 - Opportunity schema and allowed values: `app/types/opportunity.ts`
 
 Before changing the interface, check whether the change alters a documented

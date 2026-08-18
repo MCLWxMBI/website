@@ -1,4 +1,10 @@
-import type { Opportunity, OpportunityCategory, OpportunityStatus, Jurisdiction } from '~/types/opportunity'
+import type {
+  Jurisdiction,
+  Opportunity,
+  OpportunityCategory,
+  OpportunityLocation,
+  OpportunityStatus
+} from '~/types/opportunity'
 
 type Seed = Omit<Opportunity, 'fullText'> & {
   focus: string
@@ -35,8 +41,63 @@ const seeds: Seed[] = [
   seed('critical-minerals-review', 'Critical Minerals Strategy review', 'Completed review of environmental, community and economic priorities for Australia’s critical minerals sector.', 'Department of Industry, Science and Resources', 'Commonwealth', '2026-02-09', '2026-04-03', 'closed', ['Water & resources', 'First Nations & cultural heritage'], 'environmental safeguards, water use, circularity and benefit sharing')
 ]
 
+const locations: Partial<Record<string, OpportunityLocation>> = {
+  'circular-economy-regulations': {
+    label: 'Melbourne, Victoria',
+    geometry: {
+      type: 'Point',
+      coordinates: [144.9631, -37.8136]
+    }
+  },
+  'victorian-waterway-health': {
+    label: 'Central Victoria study area (prototype geometry)',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [143.2, -38.1],
+          [146.2, -38.1],
+          [146.2, -35.8],
+          [143.2, -35.8],
+          [143.2, -38.1]
+        ],
+        [
+          [144.15, -37.45],
+          [145.15, -37.45],
+          [145.15, -36.65],
+          [144.15, -36.65],
+          [144.15, -37.45]
+        ]
+      ]
+    }
+  },
+  'offshore-renewables-guidance': {
+    label: 'Victorian offshore renewable energy study areas (prototype geometry)',
+    geometry: {
+      type: 'MultiPolygon',
+      coordinates: [
+        [[
+          [146.2, -39.1],
+          [148.4, -39.1],
+          [148.4, -38.0],
+          [146.2, -38.0],
+          [146.2, -39.1]
+        ]],
+        [[
+          [140.6, -39.2],
+          [142.2, -39.2],
+          [142.2, -38.1],
+          [140.6, -38.1],
+          [140.6, -39.2]
+        ]]
+      ]
+    }
+  }
+}
+
 export const opportunities: Opportunity[] = seeds.map(({ focus, ...item }) => ({
   ...item,
+  ...(locations[item.id] ? { location: locations[item.id] } : {}),
   fullText: [
     `${item.sourceOrg} is seeking input on ${focus}.`,
     'Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation.'

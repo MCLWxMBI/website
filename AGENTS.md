@@ -8,6 +8,7 @@ intended for any coding agent working in it.
 
 - `app/` contains the client application, pages, components, styles, and local prototype data.
 - `docs/design.md` is the canonical product and interface design reference.
+- `docs/contracts.md` defines future API response requirements and frontend fallbacks.
 - `server/` is reserved for Nitro server code.
 - `public/` contains files served unchanged.
 - `nuxt.config.ts` configures Nuxt and the Netlify Nitro preset.

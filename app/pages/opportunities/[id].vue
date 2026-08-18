@@ -35,6 +35,17 @@ const returnQuery = computed(() => Object.fromEntries(
             <p v-for="paragraph in opportunity.fullText" :key="paragraph">{{ paragraph }}</p>
           </section>
 
+          <section v-if="opportunity.location" class="detail-section map-section">
+            <h2>Area affected</h2>
+            <p class="map-location-label">{{ opportunity.location.label }}</p>
+            <ClientOnly>
+              <OpportunityMap :location="opportunity.location" />
+              <template #fallback>
+                <div class="map-loading" role="status">Loading map of {{ opportunity.location.label }}…</div>
+              </template>
+            </ClientOnly>
+          </section>
+
         </article>
 
         <aside class="detail-sidebar">
