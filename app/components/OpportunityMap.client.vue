@@ -9,12 +9,16 @@ const mapElement = ref<HTMLElement | null>(null)
 let map: LeafletMap | undefined
 
 onMounted(async () => {
-  if (!mapElement.value) return
+  const element = mapElement.value
+  if (!element) return
 
   const L = await import('leaflet')
+
+  if (!element.isConnected || mapElement.value !== element) return
+
   const australiaCentre: LatLngExpression = [-25.2744, 133.7751]
 
-  map = L.map(mapElement.value, {
+  map = L.map(element, {
     center: australiaCentre,
     zoom: 4,
     scrollWheelZoom: false,
