@@ -67,15 +67,25 @@ const pageCount = computed(() => Math.max(1, Math.ceil(filtered.value.length / p
 const visibleOpportunities = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 const hasAnyFilter = computed(() => Boolean(search.value || selectedJurisdictions.value.length || selectedCategories.value.length || selectedStatuses.value.length))
 const activeFilterCount = computed(() => selectedJurisdictions.value.length + selectedCategories.value.length + selectedStatuses.value.length)
+const openOpportunityCount = computed(() => opportunities.filter(item => item.status === 'open').length)
 
 const goToPage = (nextPage: number) => {
   page.value = Math.min(Math.max(1, nextPage), pageCount.value)
   syncUrl()
-  window.scrollTo({ top: 430, behavior: 'smooth' })
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.scrollTo({
+    top: 430,
+    behavior: reducedMotion ? 'auto' : 'smooth'
+  })
 }
 
 watch(search, resetPageAndSync)
-watch(pageCount, count => { if (page.value > count) goToPage(count) })
+watch(pageCount, (count) => {
+  if (page.value > count) {
+    page.value = count
+    syncUrl()
+  }
+}, { immediate: true })
 </script>
 
 <template>
@@ -89,10 +99,9 @@ watch(pageCount, count => { if (page.value > count) goToPage(count) })
           <span class="sr-only">Search opportunities</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
           <input v-model="search" type="search" placeholder="Search by topic, organisation or keyword">
-          <kbd>⌘ K</kbd>
         </label>
         <div class="hero-meta">
-          <span><i class="live-dot"></i> {{ opportunities.filter(item => item.status === 'open').length }} opportunities open now</span>
+          <span><i class="live-dot"></i> {{ openOpportunityCount }} opportunities open now</span>
           <span>Victoria & Commonwealth</span>
         </div>
       </div>
