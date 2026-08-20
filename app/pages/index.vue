@@ -71,7 +71,7 @@ const openOpportunityCount = computed(() => opportunities.filter(item => item.st
 
 const goToPage = (nextPage: number) => {
   page.value = Math.min(Math.max(1, nextPage), pageCount.value)
-  syncUrl()
+  router.push({ query: queryState.value })
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   window.scrollTo({
     top: 430,
@@ -80,6 +80,9 @@ const goToPage = (nextPage: number) => {
 }
 
 watch(search, resetPageAndSync)
+watch(() => route.query.page, () => {
+  page.value = Math.min(Math.max(1, Number(value('page')) || 1), pageCount.value)
+})
 watch(pageCount, (count) => {
   if (page.value > count) {
     page.value = count
