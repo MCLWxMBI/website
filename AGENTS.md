@@ -23,6 +23,7 @@ converted copies of it unless explicitly requested.
 - Inspect relevant code before editing and preserve unrelated user changes.
 - Use npm and keep `package-lock.json` in sync when dependencies change.
 - Prefer typed Vue components and explicit domain types over untyped objects.
+- Account for Vue template ref auto-unwrapping: do not pass template-exposed reactive values to helpers that require `Ref`; expose typed handlers that close over script-side refs, or accept plain values at the template boundary.
 - Keep components focused: pages coordinate data and routing, while reusable display and form behavior belongs in components.
 - Maintain responsive, keyboard-accessible interfaces with visible focus states and semantic HTML.
 - Read `.agents/design.md` before changing user-interface behavior or styling.
