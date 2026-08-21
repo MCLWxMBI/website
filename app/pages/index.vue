@@ -40,6 +40,10 @@ const toggle = <T,>(list: Ref<T[]>, item: T) => {
   resetPageAndSync()
 }
 
+const toggleJurisdiction = (item: Jurisdiction) => toggle(selectedJurisdictions, item)
+const toggleCategory = (item: OpportunityCategory) => toggle(selectedCategories, item)
+const toggleStatus = (item: OpportunityStatus) => toggle(selectedStatuses, item)
+
 const clearFilters = () => {
   selectedJurisdictions.value = []
   selectedCategories.value = []
@@ -135,9 +139,9 @@ watch(pageCount, (count) => {
               :selected-jurisdictions="selectedJurisdictions"
               :selected-categories="selectedCategories"
               :selected-statuses="selectedStatuses"
-              @toggle-jurisdiction="toggle(selectedJurisdictions, $event)"
-              @toggle-category="toggle(selectedCategories, $event)"
-              @toggle-status="toggle(selectedStatuses, $event)"
+              @toggle-jurisdiction="toggleJurisdiction"
+              @toggle-category="toggleCategory"
+              @toggle-status="toggleStatus"
               @clear="clearFilters"
             />
           </aside>
@@ -170,9 +174,9 @@ watch(pageCount, (count) => {
           :selected-jurisdictions="selectedJurisdictions"
           :selected-categories="selectedCategories"
           :selected-statuses="selectedStatuses"
-          @toggle-jurisdiction="toggle(selectedJurisdictions, $event)"
-          @toggle-category="toggle(selectedCategories, $event)"
-          @toggle-status="toggle(selectedStatuses, $event)"
+          @toggle-jurisdiction="toggleJurisdiction"
+          @toggle-category="toggleCategory"
+          @toggle-status="toggleStatus"
           @clear="clearFilters"
         />
         <button class="button button-primary drawer-apply" type="button" @click="mobileFiltersOpen = false">Show {{ filtered.length }} results</button>
