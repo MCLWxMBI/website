@@ -12,12 +12,13 @@
   "securityOpt": [
     "seccomp=unconfined"
   ],
-  "postCreateCommand": "npm install --global @openai/codex",
+  "postCreateCommand": "npm install --global @openai/codex eslint eslint-plugin-vue",
   "customizations": {
     "vscode": {
       "extensions": [
         "openai.chatgpt",
-        "vue.volar"
+        "vue.volar",
+        "dbaeumer.vscode-eslint"
       ]
     }
   }
