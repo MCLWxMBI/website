@@ -114,6 +114,10 @@ watch(pageCount, (count) => {
 
     <section class="listing-section">
       <div class="container">
+        <blockquote class="catalogue-tagline">
+          “Access to information and meaningful public participation are fundamental to better environmental decision-making. At MCLE we aim to help bridge the gap between knowledge, decision-makers and communities.”
+        </blockquote>
+
         <div class="listing-toolbar">
           <div>
             <p class="section-kicker">Browse opportunities</p>

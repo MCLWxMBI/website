@@ -71,8 +71,9 @@ The homepage has two visual zones:
 - A dark-green hero introduces ECHO, highlights “shape change” in lime, and
   contains the primary search field. The dot texture and outlined circles add
   depth without competing with the content.
-- A pale catalogue surface contains the result count, filters, opportunity
-  cards, empty state, and numbered pagination.
+- A pale catalogue surface opens with a centred MCLE tagline, followed by the
+  result count, filters, opportunity cards, empty state, and numbered
+  pagination.
 
 On desktop, filters occupy a sticky 230px left sidebar and cards appear in three
 columns. The grid falls to two columns below 1050px. Below 760px, cards use one
