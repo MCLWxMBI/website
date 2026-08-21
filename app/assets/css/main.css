@@ -59,6 +59,7 @@ main { flex: 1; }
 .hero-orb-two { width: 260px; height: 260px; right: 90px; bottom: -175px; }
 
 .listing-section { background: #f7f9f8; padding: 52px 0 75px; }
+.catalogue-tagline { max-width: 900px; margin: 0 auto 44px; color: var(--ink); text-align: center; font: 600 24px/1.5 'Manrope', sans-serif; letter-spacing: -.02em; }
 .listing-toolbar { display: flex; align-items: end; justify-content: space-between; margin-bottom: 25px; }
 .section-kicker { margin: 0 0 5px; color: var(--green-700); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
 .listing-toolbar h2 { margin: 0; font: 700 26px 'Manrope'; letter-spacing: -.025em; }
@@ -179,6 +180,7 @@ main { flex: 1; }
   .hero-search kbd { display: none; }
   .hero-meta { gap: 10px; font-size: 10px; }
   .listing-section { padding-top: 38px; }
+  .catalogue-tagline { margin-bottom: 32px; font-size: 18px; line-height: 1.55; }
   .listing-layout { display: block; }
   .filter-sidebar { display: none; }
   .filter-trigger, .drawer-backdrop { display: flex; }
