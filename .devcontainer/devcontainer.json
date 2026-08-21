@@ -12,7 +12,7 @@
   "securityOpt": [
     "seccomp=unconfined"
   ],
-  "postCreateCommand": "npm install --global @openai/codex eslint eslint-plugin-vue",
+  "postCreateCommand": "npm install --global @openai/codex",
   "customizations": {
     "vscode": {
       "extensions": [
