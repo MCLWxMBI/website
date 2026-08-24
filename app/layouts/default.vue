@@ -13,6 +13,7 @@
         </NuxtLink>
         <nav aria-label="Primary navigation">
           <NuxtLink to="/" class="nav-link">Opportunities</NuxtLink>
+          <NuxtLink to="/about" class="nav-link">About</NuxtLink>
         </nav>
       </div>
     </header>
