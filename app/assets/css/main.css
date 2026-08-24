@@ -122,10 +122,14 @@ main { flex: 1; }
 .drawer-close { position: absolute; top: 10px; right: 15px; border: 0; background: transparent; font-size: 29px; cursor: pointer; }
 .drawer-apply { position: sticky; bottom: 0; width: 100%; margin-top: 16px; }
 
-.about-page { min-height: 70vh; padding: 64px 0 80px; background: #f7f9f8; }
-.about-content { max-width: 760px; padding: 48px 50px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
-.about-content h1 { margin: 0 0 20px; font: 700 clamp(36px, 4vw, 48px)/1.12 'Manrope'; letter-spacing: -.045em; }
-.about-content p { margin: 0; color: #4f5d57; font-size: 18px; line-height: 1.75; }
+.info-page { min-height: 70vh; padding: 64px 0 80px; background: #f7f9f8; }
+.info-content { max-width: 760px; padding: 48px 50px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.info-content h1 { margin: 0 0 20px; font: 700 clamp(36px, 4vw, 48px)/1.12 'Manrope'; letter-spacing: -.045em; }
+.info-content > p { margin: 0; color: #4f5d57; font-size: 18px; line-height: 1.75; }
+.resource-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.resource-list a { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 76px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; color: var(--green-700); background: var(--soft); font: 700 16px/1.45 'Manrope'; text-decoration: none; }
+.resource-list a:hover { border-color: #bbd4c9; background: var(--green-100); }
+.resource-list a > span[aria-hidden] { flex: 0 0 auto; font-size: 20px; }
 
 .detail-page { padding: 38px 0 80px; background: #f7f9f8; min-height: 70vh; }
 .back-link { display: inline-block; margin-bottom: 33px; color: var(--green-700); font-size: 13px; font-weight: 700; text-decoration: none; }
@@ -177,6 +181,8 @@ main { flex: 1; }
   .container { width: min(100% - 32px, 620px); }
   .site-header { height: 68px; }
   .brand small { display: none; }
+  .site-header nav { gap: 12px; }
+  .nav-link { font-size: 12px; }
   .hero { min-height: auto; }
   .hero-inner { padding: 50px 0 40px; }
   .hero h1 { font-size: clamp(38px, 12vw, 53px); }
@@ -191,10 +197,11 @@ main { flex: 1; }
   .filter-trigger, .drawer-backdrop { display: flex; }
   .opportunity-grid { grid-template-columns: 1fr; }
   .opportunity-card { min-height: 365px; }
-  .about-page { padding: 32px 0 56px; }
-  .about-content { padding: 30px 23px; }
-  .about-content h1 { font-size: 34px; }
-  .about-content p { font-size: 16px; }
+  .info-page { padding: 32px 0 56px; }
+  .info-content { padding: 30px 23px; }
+  .info-content h1 { font-size: 34px; }
+  .info-content > p { font-size: 16px; }
+  .resource-list a { min-height: 68px; padding: 15px 16px; font-size: 14px; }
   .detail-page { padding-top: 24px; }
   .back-link { margin-bottom: 22px; }
   .detail-layout { display: flex; flex-direction: column; }
