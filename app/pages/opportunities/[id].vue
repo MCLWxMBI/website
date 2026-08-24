@@ -57,7 +57,7 @@ const returnQuery = computed(() => Object.fromEntries(
               <span><small>Closes</small>{{ formatDate(opportunity.closeDate) }}</span>
             </div>
           </div>
-          <a :href="opportunity.sourceUrl" class="button button-primary button-wide" target="_blank" rel="noopener">View original consultation <span aria-hidden="true">↗</span></a>
+          <a :href="opportunity.sourceUrl" class="button button-primary button-wide" target="_blank" rel="noopener">View original submission <span aria-hidden="true">↗</span></a>
           <p class="external-note">You’ll be taken to the publisher’s website.</p>
         </aside>
       </div>
