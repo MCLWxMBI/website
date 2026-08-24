@@ -13,6 +13,9 @@ export const opportunityCategories = [
 ] as const
 export type OpportunityCategory = typeof opportunityCategories[number]
 
+export const websiteKeys = ['engage-victoria', 'dcceew-consult'] as const
+export type WebsiteKey = typeof websiteKeys[number]
+
 export type GeoPosition = [longitude: number, latitude: number]
 
 export interface PointGeometry {
@@ -41,6 +44,7 @@ export interface Opportunity {
   summary: string
   fullText: string[]
   sourceUrl: string
+  website: WebsiteKey
   sourceOrg: string
   jurisdiction: Jurisdiction
   openDate: string

@@ -23,6 +23,7 @@ const seed = (
   focus: string
 ): Seed => ({
   id, title, summary, sourceOrg, jurisdiction, openDate, closeDate, status, tags, focus,
+  website: jurisdiction === 'Victoria' ? 'engage-victoria' : 'dcceew-consult',
   sourceUrl: jurisdiction === 'Victoria' ? 'https://engage.vic.gov.au/' : 'https://consult.dcceew.gov.au/'
 })
 
