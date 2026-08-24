@@ -147,7 +147,7 @@ main { flex: 1; }
 .deadline-card.upcoming { background: #6a4c12; }
 .deadline-card.closed { color: var(--ink); background: #e5eae7; }
 .deadline-card > p { margin: 0 0 7px; opacity: .76; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
-.deadline-card > strong { font: 700 23px 'Manrope'; }
+.website-details { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; font: 700 23px 'Manrope'; }
 .date-range { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.18); font-size: 11px; }
 .closed .date-range { border-color: #cbd3cf; }
 .date-range span, .date-range small { display: block; }

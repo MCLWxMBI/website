@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { opportunities } from '~/data/opportunities'
+import { getWebsiteDetails } from '~/data/website-details'
 
 const route = useRoute()
 const opportunity = opportunities.find(item => item.id === route.params.id)
 if (!opportunity) throw createError({ statusCode: 404, statusMessage: 'Opportunity not found' })
+const websiteDetails = getWebsiteDetails(opportunity.website)
 
 useSeoMeta({ title: opportunity.title, description: opportunity.summary })
 
@@ -50,8 +52,10 @@ const returnQuery = computed(() => Object.fromEntries(
 
         <aside class="detail-sidebar">
           <div class="deadline-card" :class="opportunity.status">
-            <p>{{ opportunity.status === 'upcoming' ? 'Consultation opens' : opportunity.status === 'closed' ? 'Consultation closed' : 'Submissions close' }}</p>
-            <strong>{{ formatDate(opportunity.status === 'upcoming' ? opportunity.openDate : opportunity.closeDate) }}</strong>
+            <p>Website features</p>
+            <ul class="website-details">
+              <li v-for="detail in websiteDetails" :key="detail">{{ detail }}</li>
+            </ul>
             <div class="date-range">
               <span><small>Opens</small>{{ formatDate(opportunity.openDate) }}</span>
               <span><small>Closes</small>{{ formatDate(opportunity.closeDate) }}</span>

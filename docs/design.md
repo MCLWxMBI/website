@@ -101,13 +101,14 @@ supporting details. Status labels are “Open now”, “Upcoming”, and “Clo
 
 The detail route is `/opportunities/[id]`. The main column contains status,
 jurisdiction, publisher, title, summary, categories, and consultation
-description. A sticky desktop sidebar gives the opening/closing dates and a
-primary link to the official consultation.
+description. A sticky desktop sidebar highlights features of the publisher's
+website, gives the opening/closing dates, and provides a primary link to the
+official consultation.
 
 ECHO links to the publisher’s original page rather than storing downloadable
 documents. The detail page intentionally does not display public contact
-details or a documents section. On mobile, the deadline and official-source
-action move above the main description.
+details or a documents section. On mobile, the website features, dates, and
+official-source action move above the main description.
 
 ### Geographic map
 
