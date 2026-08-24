@@ -61,8 +61,8 @@ label.
 
 ### Shared shell
 
-The header contains the ECHO brand and a single Opportunities navigation item.
-The footer repeats the brand, product purpose, and pilot jurisdiction.
+The header contains the ECHO brand and Opportunities and About navigation
+items. The footer repeats the brand, product purpose, and pilot jurisdiction.
 
 ### Opportunity catalogue
 
@@ -83,6 +83,13 @@ Search covers titles, summaries, publishers, jurisdictions, and categories.
 Filters cover location, category, and status. Search and filter state is encoded
 in URL query parameters so views can be shared and restored. Empty results must
 explain what happened and provide a clear reset action.
+
+### About
+
+The `/about` page provides a concise, plain-language explanation of how ECHO
+checks environmental consultation websites, organises opportunities, and links
+people back to the original source. It uses a focused content panel and avoids
+technical implementation language.
 
 ### Opportunity card
 

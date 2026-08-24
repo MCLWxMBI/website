@@ -37,7 +37,7 @@ main { flex: 1; }
 .brand small { color: var(--muted); font-size: 11px; margin-top: 4px; }
 .site-header nav { display: flex; align-items: center; gap: 30px; }
 .nav-link { font-size: 14px; font-weight: 600; text-decoration: none; }
-.nav-link.router-link-active { color: var(--green-700); }
+.nav-link.router-link-exact-active { color: var(--green-700); }
 
 .hero { position: relative; overflow: hidden; background: var(--green-900); color: #fff; min-height: 490px; }
 .hero::before { content: ''; position: absolute; inset: 0; opacity: .15; background-image: radial-gradient(rgba(255,255,255,.8) .65px, transparent .65px); background-size: 18px 18px; }
@@ -122,6 +122,11 @@ main { flex: 1; }
 .drawer-close { position: absolute; top: 10px; right: 15px; border: 0; background: transparent; font-size: 29px; cursor: pointer; }
 .drawer-apply { position: sticky; bottom: 0; width: 100%; margin-top: 16px; }
 
+.about-page { min-height: 70vh; padding: 64px 0 80px; background: #f7f9f8; }
+.about-content { max-width: 760px; padding: 48px 50px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.about-content h1 { margin: 0 0 20px; font: 700 clamp(36px, 4vw, 48px)/1.12 'Manrope'; letter-spacing: -.045em; }
+.about-content p { margin: 0; color: #4f5d57; font-size: 18px; line-height: 1.75; }
+
 .detail-page { padding: 38px 0 80px; background: #f7f9f8; min-height: 70vh; }
 .back-link { display: inline-block; margin-bottom: 33px; color: var(--green-700); font-size: 13px; font-weight: 700; text-decoration: none; }
 .detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 62px; align-items: start; }
@@ -186,6 +191,10 @@ main { flex: 1; }
   .filter-trigger, .drawer-backdrop { display: flex; }
   .opportunity-grid { grid-template-columns: 1fr; }
   .opportunity-card { min-height: 365px; }
+  .about-page { padding: 32px 0 56px; }
+  .about-content { padding: 30px 23px; }
+  .about-content h1 { font-size: 34px; }
+  .about-content p { font-size: 16px; }
   .detail-page { padding-top: 24px; }
   .back-link { margin-bottom: 22px; }
   .detail-layout { display: flex; flex-direction: column; }
