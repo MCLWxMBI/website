@@ -6,9 +6,9 @@ useSeoMeta({
 </script>
 
 <template>
-  <div class="about-page">
+  <div class="info-page">
     <div class="container">
-      <article class="about-content">
+      <article class="info-content">
         <h1>About ECHO</h1>
         <p>Every day, ECHO checks environmental consultation websites and brings new opportunities together in one place. We organise the key details in a clear, consistent format and link back to the original website, so you can check the source and make your submission.</p>
       </article>

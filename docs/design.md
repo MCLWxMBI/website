@@ -61,8 +61,9 @@ label.
 
 ### Shared shell
 
-The header contains the ECHO brand and Opportunities and About navigation
-items. The footer repeats the brand, product purpose, and pilot jurisdiction.
+The header contains the ECHO brand and Opportunities, About, and Resources
+navigation items. The footer repeats the brand, product purpose, and pilot
+jurisdiction.
 
 ### Opportunity catalogue
 
@@ -90,6 +91,13 @@ The `/about` page provides a concise, plain-language explanation of how ECHO
 checks environmental consultation websites, organises opportunities, and links
 people back to the original source. It uses a focused content panel and avoids
 technical implementation language.
+
+### Resources
+
+The `/resources` page presents a short list of research and policy resources
+from the Melbourne Centre for Law and the Environment. Each resource is a
+clearly labelled external link that opens the University of Melbourne website
+in a new tab.
 
 ### Opportunity card
 
