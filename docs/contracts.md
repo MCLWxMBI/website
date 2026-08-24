@@ -76,6 +76,31 @@ Status fallback rules are:
 Date-only values must be compared as Australian calendar dates, not parsed as
 UTC instants that can shift the displayed day.
 
+## Website details database schema
+
+Website details are stored as a website identifier mapped to an array of
+display-ready tags. The expected PostgreSQL/Supabase table is:
+
+~~~sql
+create table websites (
+  id text primary key,
+  tags text[] not null
+);
+~~~
+
+- `id` is the stable website key referenced by opportunities, such as
+  `engage-victoria` or `dcceew-consult`.
+- `tags` contains the website features shown on the opportunity detail page,
+  such as `Login required` or `Online submission`.
+- Tags must be non-empty plain-text values. HTML must not be stored in the
+  array.
+
+The backend retrieves the tags for one website using the equivalent of:
+
+~~~sql
+select tags from websites where id = $1;
+~~~
+
 ## Geographic location
 
 Location is optional. Its absence means the opportunity has no usable
