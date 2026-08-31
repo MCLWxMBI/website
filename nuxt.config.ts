@@ -5,6 +5,15 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  vite: {
+    server: {
+      watch: {
+        usePolling: true,
+        interval: 1000,
+      }
+    }
+  },
+
   app: {
     head: {
       titleTemplate: '%s | ECHO',
