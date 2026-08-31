@@ -91,7 +91,15 @@ The `/about` page introduces the MCLE initiative and the public opportunities
 it brings together. A centred heading and italic acknowledgement of Country
 lead into the project description, a Roman-numeral list of government and
 public-sector sources, and a reminder that every listing links to its official
-source.
+source. A linked footnote leads to a bottom disclaimer clarifying that ECHO
+does not run consultations or receive submissions. Before that disclaimer, an
+expanded FAQ explains consultation process types, the five topic categories,
+and four steps for using ECHO.
+
+A compact “On this page” navigation tile links to the About introduction, FAQ,
+and its three main subsections. On wide desktop screens, the article remains
+centred while the tile stays sticky in a balanced right-side rail. At smaller
+widths, the tile moves above the article and scrolls normally with the page.
 
 ### Resources
 
