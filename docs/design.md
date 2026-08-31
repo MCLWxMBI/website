@@ -1,6 +1,6 @@
 # ECHO design guide
 
-> **Status:** Stakeholder review is pending.
+> **Status:** Approved.
 
 ## Visual direction
 
@@ -87,10 +87,11 @@ explain what happened and provide a clear reset action.
 
 ### About
 
-The `/about` page provides a concise, plain-language explanation of how ECHO
-checks environmental consultation websites, organises opportunities, and links
-people back to the original source. It uses a focused content panel and avoids
-technical implementation language.
+The `/about` page introduces the MCLE initiative and the public opportunities
+it brings together. A centred heading and italic acknowledgement of Country
+lead into the project description, a Roman-numeral list of government and
+public-sector sources, and a reminder that every listing links to its official
+source.
 
 ### Resources
 
