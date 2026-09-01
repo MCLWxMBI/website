@@ -1,5 +1,7 @@
 FROM node:24-slim
 
+ARG DENO_VERSION=2.2.4
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git \
@@ -7,6 +9,8 @@ RUN apt-get update \
         ca-certificates \
         wget \
         patch \
+        poppler-utils \
+        unzip \
     && mkdir -p -m 755 /etc/apt/keyrings \
     && wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg \
         https://cli.github.com/packages/githubcli-archive-keyring.gpg \
@@ -16,6 +20,11 @@ RUN apt-get update \
         > /etc/apt/sources.list.d/github-cli.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends gh \
+    # Netlify Edge Functions Dev 1.0.24 requires this Deno CLI behavior.
+    && curl -fsSL https://deno.land/install.sh -o /tmp/install-deno.sh \
+    && DENO_INSTALL=/usr/local sh /tmp/install-deno.sh "v${DENO_VERSION}" \
+    && deno --version \
+    && rm /tmp/install-deno.sh \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace

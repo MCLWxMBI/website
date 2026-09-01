@@ -103,10 +103,19 @@ widths, the tile moves above the article and scrolls normally with the page.
 
 ### Resources
 
-The `/resources` page presents a short list of research and policy resources
-from the Melbourne Centre for Law and the Environment. Each resource is a
-clearly labelled external link that opens the University of Melbourne website
-in a new tab.
+The `/resources` page presents MCLE's plain-language guide to taking part in
+Australian public consultations. It explains public submissions, how to plan
+and structure a contribution, how submissions can influence decisions, what
+should happen after submission, and considerations for consultation designers.
+A static participation checklist helps readers review a submission without
+implying that checklist state is saved.
+
+Resources and About share a compact “On this page” navigation tile. On wide
+desktop screens, the article remains centred while the tile stays sticky in a
+balanced right-side rail. At smaller widths, the tile moves above the article
+and scrolls normally with the page. The Resources page ends with “Further
+readings”; each item is a clearly labelled external link that opens the
+University of Melbourne website in a new tab.
 
 ### Opportunity card
 
