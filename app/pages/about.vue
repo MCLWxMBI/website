@@ -1,27 +1,29 @@
 <script setup lang="ts">
+import type { PageSectionNavItem } from '~/types/page-section-nav'
+
 useSeoMeta({
   title: 'About ECHO',
   description: 'Learn how the Melbourne Centre for Law and the Environment brings public opportunities to have your say together in one place.'
 })
+
+const sectionNavItems: PageSectionNavItem[] = [
+  { label: 'About ECHO', href: '#about-echo' },
+  {
+    label: 'FAQ',
+    href: '#faq',
+    children: [
+      { label: 'Types of processes', href: '#process-types' },
+      { label: 'Topic categories', href: '#topic-categories' },
+      { label: 'How to use this website', href: '#using-echo' }
+    ]
+  }
+]
 </script>
 
 <template>
   <div class="info-page">
-    <div class="container about-layout">
-      <nav class="section-index" aria-label="On this page">
-        <p>On this page</p>
-        <ul>
-          <li><a href="#about-echo">About ECHO</a></li>
-          <li>
-            <a href="#faq">FAQ</a>
-            <ul>
-              <li><a href="#process-types">Types of processes</a></li>
-              <li><a href="#topic-categories">Topic categories</a></li>
-              <li><a href="#using-echo">How to use this website</a></li>
-            </ul>
-          </li>
-        </ul>
-      </nav>
+    <div class="container info-layout">
+      <PageSectionNav :items="sectionNavItems" />
 
       <article id="about-echo" class="info-content about-content">
         <h1>Find the opportunity to have your say.</h1>
