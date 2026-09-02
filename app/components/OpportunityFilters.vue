@@ -23,7 +23,14 @@ const hasFilters = computed(() => props.selectedJurisdictions.length + props.sel
   <div class="filters">
     <div class="filter-heading">
       <h2>Filter opportunities</h2>
-      <button v-if="hasFilters" type="button" class="text-button" @click="emit('clear')">Clear all</button>
+      <button
+        type="button"
+        class="text-button"
+        :class="{ 'is-hidden': !hasFilters }"
+        :disabled="!hasFilters"
+        :aria-hidden="hasFilters ? undefined : 'true'"
+        @click="emit('clear')"
+      >Clear all</button>
     </div>
     <fieldset>
       <legend>Location</legend>
