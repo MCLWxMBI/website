@@ -6,10 +6,17 @@ const route = useRoute()
 const opportunity = opportunities.find(item => item.id === route.params.id)
 if (!opportunity) throw createError({ statusCode: 404, statusMessage: 'Opportunity not found' })
 const websiteDetails = getWebsiteDetails(opportunity.website)
+const { currentTime } = await useServerTime()
+const status = computed(() => getOpportunityStatus(opportunity, currentTime.value))
 
 useSeoMeta({ title: opportunity.title, description: opportunity.summary })
 
-const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${date}T00:00:00`))
+const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC'
+}).format(new Date(date))
 const returnQuery = computed(() => Object.fromEntries(
   Object.entries(route.query).filter(([, value]) => typeof value === 'string')
 ) as Record<string, string>)
@@ -22,7 +29,7 @@ const returnQuery = computed(() => Object.fromEntries(
       <div class="detail-layout">
         <article class="detail-main">
           <div class="detail-topline">
-            <StatusBadge :status="opportunity.status" />
+            <StatusBadge :status="status" />
             <span>{{ opportunity.jurisdiction }}</span>
           </div>
           <p class="source-org">{{ opportunity.sourceOrg }}</p>
@@ -51,14 +58,14 @@ const returnQuery = computed(() => Object.fromEntries(
         </article>
 
         <aside class="detail-sidebar">
-          <div class="deadline-card" :class="opportunity.status">
+          <div class="deadline-card" :class="status">
             <p>Website features</p>
             <ul class="website-details">
               <li v-for="detail in websiteDetails" :key="detail">{{ detail }}</li>
             </ul>
             <div class="date-range">
-              <span><small>Opens</small>{{ formatDate(opportunity.openDate) }}</span>
-              <span><small>Closes</small>{{ formatDate(opportunity.closeDate) }}</span>
+              <span v-if="opportunity.startDate"><small>Opens</small>{{ formatDate(opportunity.startDate) }}</span>
+              <span><small>Closes</small>{{ formatDate(opportunity.submissionDeadline) }}</span>
             </div>
           </div>
           <a :href="opportunity.sourceUrl" class="button button-primary button-wide" target="_blank" rel="noopener">View original submission <span aria-hidden="true">↗</span></a>

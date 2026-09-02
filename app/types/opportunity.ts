@@ -47,9 +47,10 @@ export interface Opportunity {
   website: WebsiteKey
   sourceOrg: string
   jurisdiction: Jurisdiction
-  openDate: string
-  closeDate: string
+  startDate: string | null
+  submissionDeadline: string
   tags: OpportunityCategory[]
-  status: OpportunityStatus
   location?: OpportunityLocation
 }
+
+export type OpportunityWithStatus = Opportunity & { status: OpportunityStatus }
