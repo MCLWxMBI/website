@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import type { Opportunity } from '~/types/opportunity'
+import type { OpportunityWithStatus } from '~/types/opportunity'
 
-const props = defineProps<{ opportunity: Opportunity; returnQuery?: Record<string, string> }>()
-const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${date}T00:00:00`))
+const props = defineProps<{ opportunity: OpportunityWithStatus; returnQuery?: Record<string, string> }>()
+const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC'
+}).format(new Date(date))
 </script>
 
 <template>
@@ -26,7 +31,9 @@ const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', { day: 'nu
     <div class="card-footer">
       <div>
         <span class="date-label">{{ props.opportunity.status === 'upcoming' ? 'Opens' : 'Closes' }}</span>
-        <strong>{{ props.opportunity.status === 'upcoming' ? formatDate(props.opportunity.openDate) : formatDate(props.opportunity.closeDate) }}</strong>
+        <strong>{{ props.opportunity.status === 'upcoming' && props.opportunity.startDate
+          ? formatDate(props.opportunity.startDate)
+          : formatDate(props.opportunity.submissionDeadline) }}</strong>
       </div>
       <NuxtLink class="card-arrow" :to="{ path: `/opportunities/${props.opportunity.id}`, query: props.returnQuery }" :aria-label="`View ${props.opportunity.title}`">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 6 6-6 6"/></svg>

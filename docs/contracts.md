@@ -19,13 +19,12 @@ interface OpportunityResponse {
   sourceUrl: string
   sourceOrg: string
   jurisdiction: 'Commonwealth' | 'Victoria'
-  openDate: string
-  closeDate: string
+  startDate: string | null
+  submissionDeadline: string
   tags: OpportunityCategory[]
 
   // Recommended; computed by the frontend when absent
   summary?: string
-  status?: 'open' | 'upcoming' | 'closed'
 
   // Optional geographic data
   location?: OpportunityLocation
@@ -42,8 +41,8 @@ interface OpportunityResponse {
 | **sourceUrl** | Absolute HTTPS URL for the official consultation page. |
 | **sourceOrg** | Non-empty name of the publishing organisation. |
 | **jurisdiction** | One of the supported jurisdiction values. Do not return an unrecognised free-text value. |
-| **openDate** | Calendar date in YYYY-MM-DD format. |
-| **closeDate** | Calendar date in YYYY-MM-DD format and not earlier than openDate. |
+| **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than `submissionDeadline`. |
+| **submissionDeadline** | ISO 8601 UTC timestamp ending in `Z`. This is the authoritative instant at which the opportunity closes. |
 | **tags** | Array containing at least one supported category, without duplicates. |
 
 Supported categories are:
@@ -62,19 +61,35 @@ API before the response reaches the frontend.
 | Field | API behavior | Frontend fallback |
 | --- | --- | --- |
 | **summary** | Return a concise plain-text summary suitable for an opportunity card. | Use the first non-empty fullText paragraph, whitespace-normalised and truncated for display. |
-| **status** | Return the authoritative current status when the source has explicitly changed or extended an opportunity. | Derive the status from openDate, closeDate, and the current Australian calendar date. |
 
 When a recommended field is present, the frontend uses the API value. It only
-computes a fallback when the field is absent or empty.
+computes a fallback when the field is absent or empty. Status is not part of the
+opportunity response; the frontend derives it using the server time contract
+below.
 
-Status fallback rules are:
+Status rules, evaluated in this order, are:
 
-1. Before openDate: upcoming.
-2. From openDate through closeDate, inclusive: open.
-3. After closeDate: closed.
+1. At or after `submissionDeadline`: closed.
+2. Before a non-null `startDate`: upcoming.
+3. Otherwise: open, including when `startDate` is `null`.
 
-Date-only values must be compared as Australian calendar dates, not parsed as
-UTC instants that can shift the displayed day.
+Equality at `startDate` means open; equality at `submissionDeadline` means
+closed. Comparisons use the UTC instants represented by the timestamps.
+
+## Server time
+
+The frontend obtains authoritative current time from `GET /api/time`. The
+response is:
+
+~~~ts
+interface ServerTimeResponse {
+  utcDateTime: string
+}
+~~~
+
+`utcDateTime` must be a valid ISO 8601 UTC timestamp ending in `Z`. The initial
+value is included in the server-rendered Nuxt payload. The client advances that
+time locally and periodically resynchronises it with this endpoint.
 
 ## Website details database schema
 
@@ -153,13 +168,12 @@ interface OpportunityLocation {
   "sourceUrl": "https://engage.vic.gov.au/",
   "sourceOrg": "Sustainability Victoria",
   "jurisdiction": "Victoria",
-  "openDate": "2026-08-17",
-  "closeDate": "2026-10-23",
+  "startDate": "2026-08-17T00:00:00Z",
+  "submissionDeadline": "2026-10-23T23:59:59Z",
   "tags": [
     "Communities & environment",
     "Climate change"
   ],
-  "status": "open",
   "location": {
     "label": "Melbourne, Victoria",
     "geometry": {

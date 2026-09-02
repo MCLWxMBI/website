@@ -5,6 +5,8 @@ import type { Jurisdiction, OpportunityCategory, OpportunityStatus } from '~/typ
 
 useSeoMeta({ title: 'Consultation opportunities' })
 
+const { currentTime } = await useServerTime()
+
 const route = useRoute()
 const router = useRouter()
 const pageSize = 6
@@ -56,9 +58,14 @@ const clearEverything = () => {
   clearFilters()
 }
 
+const opportunitiesWithStatus = computed(() => opportunities.map(opportunity => ({
+  ...opportunity,
+  status: getOpportunityStatus(opportunity, currentTime.value)
+})))
+
 const filtered = computed(() => {
   const term = search.value.trim().toLocaleLowerCase()
-  return opportunities.filter((item) => {
+  return opportunitiesWithStatus.value.filter((item) => {
     const haystack = [item.title, item.summary, item.sourceOrg, item.jurisdiction, ...item.tags].join(' ').toLocaleLowerCase()
     return (!term || haystack.includes(term))
       && (!selectedJurisdictions.value.length || selectedJurisdictions.value.includes(item.jurisdiction))
@@ -71,7 +78,7 @@ const pageCount = computed(() => Math.max(1, Math.ceil(filtered.value.length / p
 const visibleOpportunities = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 const hasAnyFilter = computed(() => Boolean(search.value || selectedJurisdictions.value.length || selectedCategories.value.length || selectedStatuses.value.length))
 const activeFilterCount = computed(() => selectedJurisdictions.value.length + selectedCategories.value.length + selectedStatuses.value.length)
-const openOpportunityCount = computed(() => opportunities.filter(item => item.status === 'open').length)
+const openOpportunityCount = computed(() => opportunitiesWithStatus.value.filter(item => item.status === 'open').length)
 
 const goToPage = (nextPage: number) => {
   page.value = Math.min(Math.max(1, nextPage), pageCount.value)

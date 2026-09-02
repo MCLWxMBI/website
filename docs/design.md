@@ -81,7 +81,10 @@ columns. The grid falls to two columns below 1050px. Below 760px, cards use one
 column and filters move into a right-side modal drawer.
 
 Search covers titles, summaries, publishers, jurisdictions, and categories.
-Filters cover location, category, and status. Search and filter state is encoded
+Filters cover location, category, and status. Status is derived from the
+server-synchronised UTC time: an opportunity is closed at or after its
+submission deadline, upcoming before a supplied start time, and open otherwise.
+A missing start time defaults to open until the deadline. Search and filter state is encoded
 in URL query parameters so views can be shared and restored. Empty results must
 explain what happened and provide a clear reset action.
 
@@ -129,14 +132,16 @@ Cards use a consistent information order:
 
 The whole hierarchy should make the title and deadline scannable before
 supporting details. Status labels are “Open now”, “Upcoming”, and “Closed”.
+Upcoming cards show the start date; open and closed cards show the submission
+deadline.
 
 ### Opportunity detail
 
 The detail route is `/opportunities/[id]`. The main column contains status,
 jurisdiction, publisher, title, summary, categories, and consultation
 description. A sticky desktop sidebar highlights features of the publisher's
-website, gives the opening/closing dates, and provides a primary link to the
-official consultation.
+website, gives the opening date when supplied and always gives the submission
+deadline, and provides a primary link to the official consultation.
 
 ECHO links to the publisher’s original page rather than storing downloadable
 documents. The detail page intentionally does not display public contact
