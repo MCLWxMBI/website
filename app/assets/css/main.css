@@ -71,7 +71,8 @@ main { flex: 1; }
 .filters { background: white; border: 1px solid var(--line); border-radius: 13px; padding: 21px; }
 .filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .filter-heading h2 { margin: 0; font: 700 15px 'Manrope'; }
-.text-button { border: 0; padding: 0; color: var(--green-700); background: transparent; font-size: 11px; font-weight: 700; cursor: pointer; }
+.text-button { border: 0; padding: 0; color: var(--green-700); background: transparent; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.text-button.is-hidden { visibility: hidden; }
 .filters fieldset { border: 0; border-top: 1px solid #edf1ef; margin: 19px 0 0; padding: 18px 0 0; }
 .filters legend { padding: 0 0 11px; font-size: 12px; font-weight: 700; }
 .check-row { display: flex; align-items: flex-start; gap: 9px; color: #46534e; font-size: 12px; line-height: 1.35; cursor: pointer; margin: 0 0 10px; }

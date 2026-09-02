@@ -11,10 +11,6 @@ export const useServerTime = async () => {
   const clientNow = ref(Date.now())
   let timer: number | undefined
 
-  const { data } = await useFetch<ServerTimeResponse>('/api/time', {
-    key: 'server-utc-time'
-  })
-
   const applyServerTime = (utcDateTime: string) => {
     const parsedTime = Date.parse(utcDateTime)
     if (Number.isNaN(parsedTime)) return
@@ -25,11 +21,13 @@ export const useServerTime = async () => {
     clientNow.value = now
   }
 
-  if (data.value && serverEpoch.value === null) applyServerTime(data.value.utcDateTime)
-
   const currentTime = computed(() => {
     if (serverEpoch.value === null || sampledClientEpoch.value === null) return clientNow.value
     return serverEpoch.value + (clientNow.value - sampledClientEpoch.value)
+  })
+
+  const timeRequest = useFetch<ServerTimeResponse>('/api/time', {
+    key: 'server-utc-time'
   })
 
   onMounted(() => {
@@ -57,6 +55,9 @@ export const useServerTime = async () => {
   onUnmounted(() => {
     if (timer !== undefined) window.clearInterval(timer)
   })
+
+  const { data } = await timeRequest
+  if (data.value && serverEpoch.value === null) applyServerTime(data.value.utcDateTime)
 
   return { currentTime: readonly(currentTime) }
 }
