@@ -32,5 +32,5 @@ export default defineNuxtConfig({
     preset: 'netlify'
   },
 
-  modules: ['@netlify/nuxt']
+  modules: ['@netlify/nuxt', 'nuxt-auth-utils']
 })
