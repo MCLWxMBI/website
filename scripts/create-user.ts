@@ -1,8 +1,9 @@
-import 'dotenv/config'
-
 import { Hash } from '@adonisjs/hash'
 import { Scrypt } from '@adonisjs/hash/drivers/scrypt'
 import { input } from '@inquirer/prompts'
+import { config } from 'dotenv'
+import { resolve } from 'node:path'
+import { parseArgs } from 'node:util'
 
 import { connectDatabase } from '../server/database'
 import { users } from '../server/database/schema'
@@ -11,10 +12,30 @@ const usernamePattern = /^[a-z0-9._-]{3,64}$/
 
 const normalizeUsername = (username: string) => username.trim().toLowerCase()
 
+const { values } = parseArgs({
+  options: {
+    'env-file': {
+      type: 'string',
+      default: '.env'
+    }
+  }
+})
+
+const envFile = resolve(process.cwd(), values['env-file'])
+const envResult = config({
+  path: envFile,
+  override: true,
+  quiet: true
+})
+
+if (envResult.error) {
+  throw new Error(`Unable to load environment file: ${envFile}`)
+}
+
 const databaseUrl = process.env.DATABASE_URL
 
 if (!databaseUrl) {
-  throw new Error('DATABASE_URL is required. Add it to the project-root .env file.')
+  throw new Error(`DATABASE_URL is required in ${envFile}`)
 }
 
 const username = normalizeUsername(await input({
