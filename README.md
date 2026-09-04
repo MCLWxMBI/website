@@ -38,6 +38,63 @@ yarn dev
 bun run dev
 ```
 
+## Database and administrator setup
+
+The application uses PostgreSQL with Drizzle ORM. Run the following commands
+from the project root.
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Update `.env` with the PostgreSQL connection string and a session password:
+
+```dotenv
+DATABASE_URL=postgresql://username:password@localhost:5432/database_name
+NUXT_SESSION_PASSWORD=replace-with-a-random-string-at-least-32-characters-long
+```
+
+The real `.env` file is ignored by Git. Do not commit database credentials or
+the session password.
+
+### Create the database table
+
+The initial migration is already included in `drizzle/`. Apply it to the
+database configured by `DATABASE_URL`:
+
+```bash
+npm run db:migrate
+```
+
+This creates the `users` table and the `user_role` enum. It also records the
+applied migration so rerunning the command does not recreate the table.
+
+When the Drizzle schema changes in the future, generate and review a new
+migration before applying it:
+
+```bash
+npm run db:generate -- --name=describe-the-change
+npm run db:migrate
+```
+
+### Create an administrator
+
+After applying the migration, run:
+
+```bash
+npm run user:create
+```
+
+The command prompts for a username, password, and password confirmation. The
+password is visible while entered. Usernames are converted to lowercase and
+must contain 3–64 letters, numbers, dots, underscores, or hyphens. Passwords
+must be non-empty but have no length or complexity requirements.
+
+The command stores only the password hash and creates the account with the
+`admin` role. It reports an error if the username already exists.
+
 ## Production
 
 Build the application for production:
