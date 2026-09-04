@@ -52,7 +52,7 @@ cp .env.example .env
 Update `.env` with the PostgreSQL connection string and a session password:
 
 ```dotenv
-DATABASE_URL=postgresql://username:password@localhost:5432/database_name
+DATABASE_URL=postgresql://echo:echo@postgres:5432/echo
 NUXT_SESSION_PASSWORD=replace-with-a-random-string-at-least-32-characters-long
 ```
 
@@ -94,6 +94,37 @@ must be non-empty but have no length or complexity requirements.
 
 The command stores only the password hash and creates the account with the
 `admin` role. It reports an error if the username already exists.
+
+### Create an administrator in production
+
+Create an ignored `.env.production` file containing the production database
+connection and session values:
+
+```dotenv
+DATABASE_URL=postgresql://production-user:production-password@production-host:5432/production-database
+NUXT_SESSION_PASSWORD=replace-with-a-production-secret-at-least-32-characters-long
+```
+
+Run the production variant of the same account command:
+
+```bash
+npm run user:create:production
+```
+
+This command runs locally but connects to the database configured in
+`.env.production`. The production database must already contain the migrated
+schema.
+
+## Dev container
+
+The development container starts the application container and PostgreSQL 18
+together using Docker Compose. PostgreSQL is available to the application as
+`postgres:5432`, is not exposed on a host port, and stores its data in a named
+Docker volume.
+
+Opening or rebuilding the dev container starts PostgreSQL but does not apply
+database migrations or create users. Run those commands manually as described
+above.
 
 ## Production
 

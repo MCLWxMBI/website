@@ -1,17 +1,10 @@
 {
   "name": "Node 24",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
+  "dockerComposeFile": "compose.yaml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/website",
+  "shutdownAction": "stopCompose",
   "remoteUser": "node",
-  // This profile permits Codex/Bubblewrap user-namespace sandboxing.
-  "runArgs": [
-    "--cap-add=SYS_ADMIN"
-  ],
-  "securityOpt": [
-    "seccomp=unconfined"
-  ],
   "postCreateCommand": "npm install --global @openai/codex",
   "customizations": {
     "vscode": {

@@ -9,7 +9,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "postinstall": "nuxt prepare",
-    "user:create": "tsx scripts/create-user.ts"
+    "user:create": "tsx scripts/create-user.ts --env-file=.env",
+    "user:create:production": "tsx scripts/create-user.ts --env-file=.env.production"
   },
   "dependencies": {
     "@adonisjs/hash": "^9.1.1",
