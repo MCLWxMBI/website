@@ -61,8 +61,12 @@ label.
 
 ### Shared shell
 
-The header contains the ECHO brand and Opportunities, About, and Resources
-navigation items. The footer repeats the brand, product purpose, and pilot
+The header contains the ECHO brand and Opportunities, Resources, and About
+navigation items, followed by **Login for Admins** linking to `/admin/login` when
+signed out, or **Go to Admin panel** linking to `/admin` for a signed-in
+administrator. The link reacts to the existing session state. Below
+760px, public navigation occupies a wrapping row beneath the brand and the header
+uses automatic height. The footer repeats the brand, product purpose, and pilot
 jurisdiction.
 
 ### Opportunity catalogue
@@ -191,3 +195,21 @@ Before changing the interface, check whether the change alters a documented
 principle, component contract, responsive behavior, or product boundary. Keep
 the code and this guide aligned, reuse existing tokens and patterns, and verify
 the production build plus the affected desktop and mobile states.
+
+## Administration
+
+The admin login and index use a dedicated ECHO shell with a public-site link,
+current username, and Sign out when authenticated. Preserve the public design
+tokens, visible keyboard focus, and spacious cards. The login form has labelled
+username/password fields, autocomplete, pending feedback, and announced errors.
+
+The protected `/admin` route is a temporary preview, with Pages and Submissions
+tabs. Pages lists About and Resources with public view links and “Editing coming
+soon.” Submissions means consultation listings and contains a coming-soon message.
+Selection is stored in `?tab=pages|submissions`, defaulting to Pages; tabs support
+Left/Right arrows, Home/End, and labelled panels. Cards stack on mobile.
+
+Sessions expire 24 hours after login without sliding renewal. Login redirects
+authenticated administrators to the index; protected navigation redirects missing
+or expired sessions to login. Authentication service failures show an unavailable
+state. Admin pages are private, non-cacheable, and excluded from indexing.

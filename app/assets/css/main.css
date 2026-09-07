@@ -296,3 +296,40 @@ main { flex: 1; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: .01ms !important; }
 }
+
+/* Administration uses the public site's existing tokens. */
+.admin-shell { background: var(--soft); }
+.admin-header { background: var(--surface); border-bottom: 1px solid var(--line); }
+.admin-header-inner, .admin-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.admin-header-inner { justify-content: space-between; padding-block: 20px; }
+.admin-actions { font-size: 14px; }
+.admin-main { padding-block: 48px; }
+.admin-main h1 { font: 800 32px/1.2 'Manrope', sans-serif; letter-spacing: -.03em; }
+.admin-main h2, .admin-main h3 { font-family: 'Manrope', sans-serif; }
+.admin-main p { line-height: 1.6; }
+.admin-eyebrow { color: var(--green-700); font-weight: 700; }
+.admin-intro { color: var(--muted); max-width: 680px; }
+.admin-card { padding: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.admin-card h3 { margin-top: 0; }
+.admin-login { max-width: 460px; margin-inline: auto; }
+.admin-form { display: grid; gap: 12px; margin-top: 24px; }
+.admin-form label { font-weight: 600; }
+.admin-form input { width: 100%; min-width: 0; min-height: 46px; padding: 10px 12px; border: 1px solid var(--muted); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.admin-form button { margin-top: 12px; }
+.admin-error { color: #a12622; line-height: 1.5; }
+.admin-shell button:disabled { opacity: .65; cursor: wait; }
+.admin-tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-block: 30px; }
+.admin-tabs button { padding: 14px 20px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--ink); cursor: pointer; font-weight: 700; }
+.admin-tabs button[aria-selected="true"] { border-color: var(--green-700); color: var(--green-700); }
+.admin-page-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.admin-view-link { color: var(--green-700); font-weight: 700; }
+.admin-coming-soon { color: var(--muted); font-size: 14px; margin-bottom: 0; }
+@media (max-width: 760px) {
+  .site-header { height: auto; }
+  .header-inner { flex-wrap: wrap; gap: 16px; padding-block: 16px; }
+  .site-header nav { width: 100%; flex-wrap: wrap; gap: 12px 20px; }
+  .site-header .nav-link { padding-block: 6px; }
+  .admin-main { padding-block: 28px; }
+  .admin-page-grid { grid-template-columns: 1fr; }
+  .admin-card { padding: 22px; }
+}
