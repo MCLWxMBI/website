@@ -208,9 +208,12 @@ token prompts the user to reload and retry. Cookies require HTTPS in production.
 
 `npm run test:unit` runs the Vitest Node suite once;
 `npm run test:unit:watch` runs it in watch mode. Tests exercise authentication
-services, Nitro handlers, and the installed CSRF middleware in process. Database
-and session boundaries are mocked, while password verification and CSRF
-cryptography use their real implementations. No environment files, PostgreSQL,
-Nuxt server, or browser are required. No end-to-end tests are included.
+services, application-owned Nitro handlers, and the logout wrapper in process.
+Database and framework session boundaries are mocked; password verification uses
+the real Scrypt implementation. Coverage includes account eligibility, sanitized
+errors, fixed 24-hour expiry, and waiting for successful deletion before refreshing
+local session state. No environment files, PostgreSQL, Nuxt server, or browser are
+required. Real CSRF middleware and Nuxt authentication module integration coverage
+are deferred. No end-to-end or browser tests are included.
 
 Run `npm run build` after application or configuration changes.

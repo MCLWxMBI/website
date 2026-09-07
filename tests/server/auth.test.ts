@@ -9,10 +9,8 @@ import { logoutAdmin } from '../../app/utils/admin-logout'
 const repository = vi.hoisted(() => ({ byId: vi.fn(), byUsername: vi.fn() }))
 vi.mock('../../server/utils/admin-repository', () => ({ adminRepository: repository }))
 vi.mock('h3', async (original) => ({ ...await original<typeof import('h3')>(), readBody: vi.fn(async () => body) }))
-vi.mock('../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session.js', async () => ({ clearUserSession: (await import('../support/nitro-imports')).clearUserSession }))
 import login from '../../server/api/admin/login.post'
 import sessionHandler from '../../server/api/admin/session.get'
-import logout from '../../node_modules/nuxt-auth-utils/dist/runtime/server/api/session.delete.js'
 let body: unknown
 let account: User
 const event = {} as Parameters<typeof login>[0]
@@ -94,13 +92,17 @@ describe('server authorization', () => {
   })
 })
 
-describe('logout integration', () => {
-  it('clears the server session before refreshing local state', async () => {
+describe('logout wrapper', () => {
+  it('waits for session deletion to complete before refreshing local state', async () => {
+    let completeDeletion!: () => void
+    const removeSession = vi.fn(() => new Promise<void>((resolve) => { completeDeletion = resolve }))
     const refresh = vi.fn()
-    await logoutAdmin(() => logout(event), refresh)
-    expect(clearUserSession).toHaveBeenCalledWith(event)
+    const pending = logoutAdmin(removeSession, refresh)
+    expect(removeSession).toHaveBeenCalledOnce()
+    expect(refresh).not.toHaveBeenCalled()
+    completeDeletion()
+    await pending
     expect(refresh).toHaveBeenCalledOnce()
-    expect(clearUserSession.mock.invocationCallOrder[0]).toBeLessThan(refresh.mock.invocationCallOrder[0]!)
   })
   it('preserves local state and propagates failed deletion for UI feedback', async () => {
     const refresh = vi.fn()
