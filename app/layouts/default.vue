@@ -1,3 +1,8 @@
+<script setup lang="ts">
+const { user } = useUserSession()
+const isAdmin = computed(() => user.value?.role === 'admin')
+</script>
+
 <template>
   <div class="site-shell">
     <header class="site-header">
@@ -18,6 +23,7 @@
           <NuxtLink to="/" class="nav-link">Opportunities</NuxtLink>
           <NuxtLink to="/resources" class="nav-link">Resources</NuxtLink>
           <NuxtLink to="/about" class="nav-link">About</NuxtLink>
+          <NuxtLink :to="isAdmin ? '/admin' : '/admin/login'" class="nav-link">{{ isAdmin ? 'Go to Admin panel' : 'Login for Admins' }}</NuxtLink>
         </nav>
       </div>
     </header>

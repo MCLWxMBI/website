@@ -10,7 +10,9 @@
     "generate": "nuxt generate",
     "postinstall": "nuxt prepare",
     "user:create": "tsx scripts/create-user.ts --env-file=.env",
-    "user:create:production": "tsx scripts/create-user.ts --env-file=.env.production"
+    "user:create:production": "tsx scripts/create-user.ts --env-file=.env.production",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest"
   },
   "dependencies": {
     "@adonisjs/hash": "^9.1.1",
@@ -20,18 +22,24 @@
     "leaflet": "^1.9.4",
     "nuxt": "^4.5.2",
     "nuxt-auth-utils": "^0.5.30",
+    "nuxt-csurf": "^1.6.6",
     "postgres": "^3.4.9",
     "vue": "^3.5.41",
     "vue-router": "^5.2.0"
   },
   "devDependencies": {
     "@netlify/nuxt": "^0.3.9",
+    "@nuxt/test-utils": "^4.2.0",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26.2.0",
+    "@vue/test-utils": "^2.5.0",
     "drizzle-kit": "^0.31.10",
     "eslint-plugin-vue": "^10.10.0",
+    "happy-dom": "^20.14.0",
     "nitropack": "^2.13.4",
+    "playwright-core": "^1.63.0",
     "tsx": "^4.23.13",
-    "typescript-eslint": "^8.67.0"
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.1.11"
   }
 }

@@ -11,6 +11,7 @@ RUN apt-get update \
         patch \
         poppler-utils \
         unzip \
+        postgresql-client \
     && mkdir -p -m 755 /etc/apt/keyrings \
     && wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg \
         https://cli.github.com/packages/githubcli-archive-keyring.gpg \

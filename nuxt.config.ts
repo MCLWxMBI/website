@@ -1,5 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  modules: ['@netlify/nuxt', 'nuxt-auth-utils', 'nuxt-csurf'],
+
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
@@ -21,7 +23,15 @@ export default defineNuxtConfig({
     }
   },
 
+  csurf: {
+    methodsToProtect: ['POST', 'PUT', 'PATCH', 'DELETE']
+  },
+
   runtimeConfig: {
+    session: {
+      maxAge: 86_400,
+      cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' }
+    },
     public: {
       mapTileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       mapAttribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -32,5 +42,9 @@ export default defineNuxtConfig({
     preset: 'netlify'
   },
 
-  modules: ['@netlify/nuxt', 'nuxt-auth-utils']
+  netlify: {
+    database: {
+      enabled: false
+    }
+  }
 })
