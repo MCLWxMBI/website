@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { getStaticPageEditorState, resolveEditorReadyContent } from '../../app/utils/static-page-editor-state'
+import {
+  applyEditorReadOnly,
+  getStaticPageEditorState,
+  reconcileSavedEditorContent,
+  resolveEditorReadyContent
+} from '../../app/utils/static-page-editor-state'
 
 describe('static page editor state', () => {
   it('keeps an untouched starter clean while allowing its first publish', () => {
@@ -82,5 +87,31 @@ describe('Jodit-ready baseline resolution', () => {
 
     expect(ready.contentHtml).toBe(ready.baselineHtml)
     expect(getStaticPageEditorState(published, ready.contentHtml, ready.baselineHtml).dirty).toBe(false)
+  })
+})
+
+describe('saving editor content', () => {
+  it('uses the sanitized stored response when content stayed frozen', () => {
+    expect(reconcileSavedEditorContent('<h1>Draft</h1>', '<h1>Draft</h1>', '<h1>Stored</h1>')).toEqual({
+      contentHtml: '<h1>Stored</h1>',
+      baselineHtml: '<h1>Stored</h1>'
+    })
+  })
+
+  it('retains an unexpected newer edit while recording what the server stored', () => {
+    const result = reconcileSavedEditorContent('<h1>Newer edit</h1>', '<h1>Submitted</h1>', '<h1>Stored</h1>')
+    expect(result).toEqual({
+      contentHtml: '<h1>Newer edit</h1>',
+      baselineHtml: '<h1>Stored</h1>'
+    })
+    expect(getStaticPageEditorState(true, result.contentHtml, result.baselineHtml).dirty).toBe(true)
+  })
+
+  it('passes saving state to the editor read-only API', () => {
+    const editor = { setReadOnly: vi.fn() }
+    applyEditorReadOnly(editor, true)
+    applyEditorReadOnly(editor, false)
+    expect(editor.setReadOnly).toHaveBeenNthCalledWith(1, true)
+    expect(editor.setReadOnly).toHaveBeenNthCalledWith(2, false)
   })
 })

@@ -85,8 +85,14 @@ export function updateEditablePageHeading(contentHtml: string, index: number, up
     }
     if (update.label !== undefined) heading.dataset.pageNavLabel = update.label
     if (update.parentId !== undefined) {
-      if (update.parentId) heading.dataset.pageNavParent = update.parentId
-      else delete heading.dataset.pageNavParent
+      if (update.parentId) {
+        if (heading.id) {
+          for (const element of elements) {
+            if (element.dataset.pageNavParent === heading.id) delete element.dataset.pageNavParent
+          }
+        }
+        heading.dataset.pageNavParent = update.parentId
+      } else delete heading.dataset.pageNavParent
     }
   }
 

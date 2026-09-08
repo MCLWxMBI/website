@@ -9,6 +9,15 @@ export interface EditorReadyContent {
   contentHtml: string
 }
 
+export interface SavedEditorContent {
+  baselineHtml: string
+  contentHtml: string
+}
+
+export interface ReadOnlyEditor {
+  setReadOnly: (readOnly: boolean) => void
+}
+
 export function getStaticPageEditorState(
   published: boolean,
   contentHtml: string,
@@ -30,4 +39,19 @@ export function resolveEditorReadyContent(
 ): EditorReadyContent {
   if (preservePreReadyChange) return { contentHtml, baselineHtml }
   return { contentHtml: normalizedHtml, baselineHtml: normalizedHtml }
+}
+
+export function reconcileSavedEditorContent(
+  currentHtml: string,
+  submittedHtml: string,
+  storedHtml: string
+): SavedEditorContent {
+  return {
+    contentHtml: currentHtml === submittedHtml ? storedHtml : currentHtml,
+    baselineHtml: storedHtml
+  }
+}
+
+export function applyEditorReadOnly(editor: ReadOnlyEditor | undefined, readOnly: boolean) {
+  editor?.setReadOnly(readOnly)
 }

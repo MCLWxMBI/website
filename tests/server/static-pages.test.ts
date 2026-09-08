@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { StaticPage } from '../../server/database/schema'
 import { readStaticPage, saveStaticPage, type StaticPageRepository } from '../../server/services/static-pages'
-import { sanitizeStaticPageHtml } from '../../shared/utils/static-page-content'
+import { sanitizeStaticPageHtml, validateStaticPageHtml } from '../../shared/utils/static-page-content'
 import aboutTemplate from '../../app/content/static-pages/about.txt?raw'
 import resourcesTemplate from '../../app/content/static-pages/resources.txt?raw'
 
@@ -48,6 +48,20 @@ describe('static page sanitization', () => {
   it('removes executable content, unsafe URLs and images without alt text', () => {
     const clean = sanitizeStaticPageHtml('<h1 onclick="alert(1)">Title</h1><script>alert(1)</script><a href="javascript:alert(1)">Bad</a><img src="data:image/png;base64,abc" alt=""><iframe src="https://example.com"></iframe>')
     expect(clean).toBe('<h1>Title</h1><a>Bad</a>')
+  })
+
+  it.each([
+    '<h1></h1><p>Body content</p>',
+    '<h1> &nbsp; </h1><p>Body content</p>',
+    '<h1><br></h1><p>Body content</p>',
+    '<h1><img src="https://example.com/title.jpg" alt="Title image"></h1><p>Body content</p>'
+  ])('rejects a page whose H1 has no text: %s', (html) => {
+    expect(() => validateStaticPageHtml(html)).toThrow('title and some text')
+  })
+
+  it('accepts title text inside approved inline formatting', () => {
+    expect(validateStaticPageHtml('<h1><span><strong>About <em>ECHO</em></strong></span></h1><p>Body</p>'))
+      .toContain('<h1><span><strong>About <em>ECHO</em></strong></span></h1>')
   })
 })
 

@@ -106,6 +106,10 @@ template can be saved without first editing it. A successful save updates the
 public page immediately for its next visit or refresh. If saving fails, the
 previously published page remains unchanged.
 
+The editor and its writing controls pause briefly while saving. Wait for the
+success or error message before continuing to edit. This prevents changes made
+during a slow save from being lost.
+
 If the message mentions a security token, reload the editor page and try the
 save again. If it reports invalid content, check that the document still has a
 title and meaningful text. A database error usually needs help from the person

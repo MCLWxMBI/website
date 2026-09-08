@@ -60,4 +60,32 @@ describe('client-side page navigation', () => {
     expect(updated).not.toContain('data-page-nav-parent')
     expect(updated).toContain('data-page-nav-label="One"')
   })
+
+  it('promotes children when their parent becomes nested', () => {
+    const updated = updateEditablePageHeading(`
+      <h2 id="a" data-page-nav-label="A">A</h2>
+      <h2 id="b" data-page-nav-label="B">B</h2>
+      <h3 id="c" data-page-nav-label="C" data-page-nav-parent="b">C</h3>
+      <h2 id="d" data-page-nav-label="D">D</h2>
+    `, 1, { parentId: 'a' })
+    const root = content(updated)
+
+    expect(root.querySelector('#b')?.getAttribute('data-page-nav-parent')).toBe('a')
+    expect(root.querySelector('#c')?.hasAttribute('data-page-nav-parent')).toBe(false)
+    expect(extractPageNavigation(root)).toEqual([
+      { label: 'A', href: '#a', children: [{ label: 'B', href: '#b' }] },
+      { label: 'C', href: '#c' },
+      { label: 'D', href: '#d' }
+    ])
+  })
+
+  it('does not alter unrelated one-level nesting', () => {
+    const updated = updateEditablePageHeading(`
+      <h2 id="a" data-page-nav-label="A">A</h2>
+      <h2 id="b" data-page-nav-label="B">B</h2>
+      <h3 id="c" data-page-nav-label="C" data-page-nav-parent="a">C</h3>
+    `, 1, { label: 'Renamed B' })
+
+    expect(content(updated).querySelector('#c')?.getAttribute('data-page-nav-parent')).toBe('a')
+  })
 })

@@ -4,7 +4,7 @@ import { isStaticPageSlug } from '~~/shared/types/static-page'
 import { sanitizeStaticPageHtml } from '~~/shared/utils/static-page-content'
 import { staticPageDetails, staticPageTemplates } from '~/content/static-pages'
 import { listEditablePageHeadings, updateEditablePageHeading } from '~/utils/page-navigation'
-import { getStaticPageEditorState, resolveEditorReadyContent } from '~/utils/static-page-editor-state'
+import { getStaticPageEditorState, reconcileSavedEditorContent, resolveEditorReadyContent } from '~/utils/static-page-editor-state'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useSeoMeta({ title: 'Edit static page' })
@@ -67,6 +67,7 @@ const blocks = computed(() => slug === 'about' ? [
 ])
 
 function updateHeading(index: number, update: { included?: boolean, label?: string, parentId?: string }) {
+  if (saving.value) return
   contentHtml.value = updateEditablePageHeading(contentHtml.value, index, update)
   if (!editorReady.value) changedBeforeEditorReady.value = true
 }
@@ -88,6 +89,7 @@ function changeHeadingParent(event: Event, index: number) {
 }
 
 function insertSelectedBlock() {
+  if (saving.value) return
   const block = blocks.value.find(item => item.value === selectedBlock.value)
   if (block) editor.value?.insertHtml(block.html)
 }
@@ -97,6 +99,7 @@ function escapeAttribute(value: string) {
 }
 
 function insertImage() {
+  if (saving.value) return
   const validUrl = imageUrl.value.startsWith('/') || /^https:\/\//i.test(imageUrl.value)
   if (!validUrl || !imageAlt.value.trim()) {
     error.value = 'Enter an HTTPS or same-site image URL and descriptive alternative text.'
@@ -109,6 +112,7 @@ function insertImage() {
 }
 
 function reloadTemplate() {
+  if (saving.value) return
   if (dirty.value && !window.confirm('Discard your unsaved changes and reload the original template?')) return
   contentHtml.value = staticPageTemplates[slug]
   if (!published.value) baselineHtml.value = staticPageTemplates[slug]
@@ -118,6 +122,7 @@ function reloadTemplate() {
 }
 
 function updateEditorContent(value: string) {
+  if (saving.value) return
   contentHtml.value = value
 }
 
@@ -134,17 +139,19 @@ function editorLoaded(normalizedHtml: string) {
 }
 
 async function save() {
-  if (saving.value) return
+  if (saving.value || !editorReady.value) return
+  const submittedHtml = contentHtml.value
   saving.value = true
   feedback.value = ''
   error.value = ''
   try {
     const result = await $csrfFetch<StoredStaticPageResponse>(`/api/admin/pages/${slug}`, {
       method: 'PUT',
-      body: { contentHtml: contentHtml.value }
+      body: { contentHtml: submittedHtml }
     })
-    contentHtml.value = result.contentHtml
-    baselineHtml.value = result.contentHtml
+    const savedContent = reconcileSavedEditorContent(contentHtml.value, submittedHtml, result.contentHtml)
+    contentHtml.value = savedContent.contentHtml
+    baselineHtml.value = savedContent.baselineHtml
     published.value = true
     savedAt.value = result.updatedAt
     feedback.value = 'Page saved and published.'
@@ -184,8 +191,8 @@ onBeforeRouteLeave(() => !dirty.value || window.confirm('Leave without saving yo
       </div>
       <div class="admin-editor-actions">
         <NuxtLink :to="details.publicPath" target="_blank" rel="noopener">View public page<span class="sr-only"> (opens in a new tab)</span></NuxtLink>
-        <button type="button" class="button admin-secondary-button" @click="reloadTemplate">Reload original template</button>
-        <button type="button" class="button button-primary" :disabled="saving || !canSave" @click="save">{{ saving ? 'Saving…' : 'Save and publish' }}</button>
+        <button type="button" class="button admin-secondary-button" :disabled="saving" @click="reloadTemplate">Reload original template</button>
+        <button type="button" class="button button-primary" :disabled="saving || !editorReady || !canSave" @click="save">{{ saving ? 'Saving…' : 'Save and publish' }}</button>
       </div>
     </div>
 
@@ -200,20 +207,20 @@ onBeforeRouteLeave(() => !dirty.value || window.confirm('Leave without saving yo
         <label for="block-type">Insert a styled block</label>
         <p class="admin-control-help">Place the cursor in the editor where the new block should appear.</p>
         <div class="admin-inline-controls">
-          <select id="block-type" v-model="selectedBlock">
+          <select id="block-type" v-model="selectedBlock" :disabled="saving">
             <option v-for="block in blocks" :key="block.value" :value="block.value">{{ block.label }}</option>
           </select>
-          <button type="button" class="button admin-secondary-button" :disabled="!editorReady" @click="insertSelectedBlock">Insert block</button>
+          <button type="button" class="button admin-secondary-button" :disabled="saving || !editorReady" @click="insertSelectedBlock">Insert block</button>
         </div>
       </div>
       <details>
         <summary>Insert an image from a link</summary>
         <div class="admin-image-controls">
           <label for="image-url">HTTPS or same-site image URL</label>
-          <input id="image-url" v-model="imageUrl" type="url" placeholder="https://example.org/image.jpg">
+          <input id="image-url" v-model="imageUrl" type="url" placeholder="https://example.org/image.jpg" :disabled="saving">
           <label for="image-alt">Alternative text</label>
-          <input id="image-alt" v-model="imageAlt" type="text">
-          <button type="button" class="button admin-secondary-button" :disabled="!editorReady" @click="insertImage">Insert image</button>
+          <input id="image-alt" v-model="imageAlt" type="text" :disabled="saving">
+          <button type="button" class="button admin-secondary-button" :disabled="saving || !editorReady" @click="insertImage">Insert image</button>
         </div>
       </details>
     </div>
@@ -221,7 +228,7 @@ onBeforeRouteLeave(() => !dirty.value || window.confirm('Leave without saving yo
     <div class="admin-editor-layout">
       <div class="admin-editor-column">
         <h2>Editor</h2>
-        <JoditEditor ref="editor" :model-value="contentHtml" :content-class="details.contentClass" @update:model-value="updateEditorContent" @ready="editorLoaded" />
+        <JoditEditor ref="editor" :model-value="contentHtml" :content-class="details.contentClass" :read-only="saving" @update:model-value="updateEditorContent" @ready="editorLoaded" />
       </div>
 
       <aside class="admin-nav-editor admin-card" aria-labelledby="nav-editor-title">
@@ -230,14 +237,14 @@ onBeforeRouteLeave(() => !dirty.value || window.confirm('Leave without saving yo
         <ol v-if="headings.length">
           <li v-for="heading in headings" :key="heading.index">
             <label class="admin-nav-toggle">
-              <input type="checkbox" :checked="heading.included" @change="changeHeadingIncluded($event, heading.index)">
+              <input type="checkbox" :checked="heading.included" :disabled="saving" @change="changeHeadingIncluded($event, heading.index)">
               <span>{{ heading.text || 'Untitled heading' }}</span>
             </label>
             <template v-if="heading.included">
               <label :for="`nav-label-${heading.index}`">Short label</label>
-              <input :id="`nav-label-${heading.index}`" :value="heading.label" @change="changeHeadingLabel($event, heading.index)">
+              <input :id="`nav-label-${heading.index}`" :value="heading.label" :disabled="saving" @change="changeHeadingLabel($event, heading.index)">
               <label :for="`nav-parent-${heading.index}`">Nesting</label>
-              <select :id="`nav-parent-${heading.index}`" :value="heading.parentId" @change="changeHeadingParent($event, heading.index)">
+              <select :id="`nav-parent-${heading.index}`" :value="heading.parentId" :disabled="saving" @change="changeHeadingParent($event, heading.index)">
                 <option value="">Top level</option>
                 <option v-for="parent in parentOptions(heading.index)" :key="parent.id" :value="parent.id">Under {{ parent.label }}</option>
               </select>

@@ -73,6 +73,8 @@ export function validateStaticPageHtml(contentHtml: unknown): string {
   if (contentHtml.length > 300_000) throw new Error('Page content is too large.')
   const clean = sanitizeStaticPageHtml(contentHtml)
   const text = sanitizeHtml(clean, { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, ' ').trim()
-  if (!text || !/<h1(?:\s|>)/i.test(clean)) throw new Error('Page content must include a title and some text.')
+  const hasTextTitle = Array.from(clean.matchAll(/<h1(?:\s[^>]*)?>([\s\S]*?)<\/h1>/gi))
+    .some(match => sanitizeHtml(match[1] ?? '', { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, ' ').trim())
+  if (!text || !hasTextTitle) throw new Error('Page content must include a title and some text.')
   return clean
 }

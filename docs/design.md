@@ -218,7 +218,9 @@ callouts, prompts, readings, and disclaimers. The editing canvas approximates th
 public styles and a separate preview uses the public content classes. A companion
 navigation panel marks H1–H3 headings for inclusion, short labels, and one level
 of nesting. Content is sanitized on save and is public immediately after a
-successful write.
+successful write. While a save is pending, Jodit and every control that can
+change page content are disabled; the preview and public-page link remain
+available.
 
 When no database row exists, the editor displays an unpublished HTML starter
 document that reproduces the former static page. An untouched starter is a clean

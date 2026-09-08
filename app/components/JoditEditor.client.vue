@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Jodit } from 'jodit'
+import { applyEditorReadOnly } from '~/utils/static-page-editor-state'
 
 const props = defineProps<{
   modelValue: string
   contentClass: string
+  readOnly: boolean
 }>()
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -49,6 +51,7 @@ async function start() {
     if (!host.value || editor) return
     editor = Jodit.make(host.value, {
       height: 620,
+      readonly: props.readOnly,
       toolbarAdaptive: false,
       buttons: ['undo', 'redo', '|', 'paragraph', 'bold', 'italic', '|', 'ul', 'ol', 'blockquote', '|', 'link', 'eraser'],
       askBeforePasteHTML: false,
@@ -56,8 +59,11 @@ async function start() {
       uploader: { insertImageAsBase64URI: false }
     })
     editor.value = props.modelValue
+    applyEditorReadOnly(editor, props.readOnly)
     editor.editor.classList.add('static-page-editor-canvas', 'info-content', props.contentClass)
-    editor.events.on('change', () => emit('update:modelValue', editor?.value ?? ''))
+    editor.events.on('change', () => {
+      if (!props.readOnly) emit('update:modelValue', editor?.value ?? '')
+    })
     emit('ready', editor.value)
   } catch {
     document.getElementById(stylesheet.id)?.remove()
@@ -66,7 +72,7 @@ async function start() {
 }
 
 function insertHtml(html: string) {
-  if (!editor) return
+  if (!editor || props.readOnly) return
   editor.s.insertHTML(html)
   emit('update:modelValue', editor.value)
   editor.synchronizeValues()
@@ -76,6 +82,8 @@ function insertHtml(html: string) {
 watch(() => props.modelValue, (value) => {
   if (editor && editor.value !== value) editor.value = value
 })
+
+watch(() => props.readOnly, value => applyEditorReadOnly(editor, value))
 
 onMounted(start)
 onBeforeUnmount(() => {
