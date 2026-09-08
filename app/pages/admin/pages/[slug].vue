@@ -4,7 +4,7 @@ import { isStaticPageSlug } from '~~/shared/types/static-page'
 import { sanitizeStaticPageHtml } from '~~/shared/utils/static-page-content'
 import { staticPageDetails, staticPageTemplates } from '~/content/static-pages'
 import { listEditablePageHeadings, updateEditablePageHeading } from '~/utils/page-navigation'
-import { getStaticPageEditorState } from '~/utils/static-page-editor-state'
+import { getStaticPageEditorState, resolveEditorReadyContent } from '~/utils/static-page-editor-state'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useSeoMeta({ title: 'Edit static page' })
@@ -112,8 +112,8 @@ function reloadTemplate() {
   if (dirty.value && !window.confirm('Discard your unsaved changes and reload the original template?')) return
   contentHtml.value = staticPageTemplates[slug]
   if (!published.value) baselineHtml.value = staticPageTemplates[slug]
-  if (!editorReady.value) changedBeforeEditorReady.value = false
-  feedback.value = 'Original template loaded. It has not been published.'
+  if (!editorReady.value) changedBeforeEditorReady.value = published.value
+  feedback.value = 'Original template loaded in the editor. Save to publish it.'
   error.value = ''
 }
 
@@ -122,10 +122,14 @@ function updateEditorContent(value: string) {
 }
 
 function editorLoaded(normalizedHtml: string) {
-  if (!changedBeforeEditorReady.value) {
-    contentHtml.value = normalizedHtml
-    baselineHtml.value = normalizedHtml
-  }
+  const readyContent = resolveEditorReadyContent(
+    contentHtml.value,
+    baselineHtml.value,
+    normalizedHtml,
+    changedBeforeEditorReady.value
+  )
+  contentHtml.value = readyContent.contentHtml
+  baselineHtml.value = readyContent.baselineHtml
   editorReady.value = true
 }
 
