@@ -1,7 +1,14 @@
 // @vitest-environment happy-dom
 
 import { describe, expect, it } from 'vitest'
-import { extractPageNavigation, headingId, listEditablePageHeadings, updateEditablePageHeading } from '../../app/utils/page-navigation'
+import {
+  extractPageNavigation,
+  headingId,
+  listEditablePageHeadings,
+  normalizeEditablePageNavigation,
+  updateEditablePageHeading
+} from '../../app/utils/page-navigation'
+import { reconcileSavedEditorContent } from '../../app/utils/static-page-editor-state'
 
 function content(html: string) {
   const root = document.createElement('article')
@@ -87,5 +94,72 @@ describe('client-side page navigation', () => {
     `, 1, { label: 'Renamed B' })
 
     expect(content(updated).querySelector('#c')?.getAttribute('data-page-nav-parent')).toBe('a')
+  })
+
+  it('promotes a nested heading moved above its parent before saving', () => {
+    const normalized = normalizeEditablePageNavigation(`
+      <h3 id="child" data-page-nav-label="Child" data-page-nav-parent="parent">Child</h3>
+      <h2 id="parent" data-page-nav-label="Parent">Parent</h2>
+    `)
+    const root = content(normalized)
+
+    expect(root.querySelector('#child')?.hasAttribute('data-page-nav-parent')).toBe(false)
+    expect(extractPageNavigation(root)).toEqual([
+      { label: 'Child', href: '#child' },
+      { label: 'Parent', href: '#parent' }
+    ])
+  })
+
+  it('preserves a valid parent that is an earlier top-level heading', () => {
+    const normalized = normalizeEditablePageNavigation(`
+      <h2 id="parent" data-page-nav-label="Parent">Parent</h2>
+      <h3 id="child" data-page-nav-label="Child" data-page-nav-parent="parent">Child</h3>
+      <h2 id="other" data-page-nav-label="Other">Other</h2>
+    `)
+    const root = content(normalized)
+
+    expect(root.querySelector('#child')?.getAttribute('data-page-nav-parent')).toBe('parent')
+    expect(extractPageNavigation(root)).toEqual([
+      { label: 'Parent', href: '#parent', children: [{ label: 'Child', href: '#child' }] },
+      { label: 'Other', href: '#other' }
+    ])
+  })
+
+  it('uses normalized navigation HTML as the submitted and saved baseline', () => {
+    const submittedHtml = normalizeEditablePageNavigation(`
+      <h3 id="child" data-page-nav-label="Child" data-page-nav-parent="parent">Child</h3>
+      <h2 id="parent" data-page-nav-label="Parent">Parent</h2>
+    `)
+    const storedHtml = submittedHtml.replace(/\s+/g, ' ').trim()
+    const saved = reconcileSavedEditorContent(submittedHtml, submittedHtml, storedHtml)
+
+    expect(submittedHtml).not.toContain('data-page-nav-parent')
+    expect(saved).toEqual({ contentHtml: storedHtml, baselineHtml: storedHtml })
+  })
+
+  it.each([
+    {
+      name: 'missing parent',
+      html: '<h2 id="child" data-page-nav-label="Child" data-page-nav-parent="missing">Child</h2>',
+      childId: 'child'
+    },
+    {
+      name: 'excluded parent',
+      html: '<h2 id="parent">Parent</h2><h3 id="child" data-page-nav-label="Child" data-page-nav-parent="parent">Child</h3>',
+      childId: 'child'
+    },
+    {
+      name: 'duplicate parent ID',
+      html: '<h2 id="parent" data-page-nav-label="First">First</h2><h2 id="parent" data-page-nav-label="Second">Second</h2><h3 id="child" data-page-nav-label="Child" data-page-nav-parent="parent">Child</h3>',
+      childId: 'child'
+    },
+    {
+      name: 'nested parent',
+      html: '<h2 id="root" data-page-nav-label="Root">Root</h2><h3 id="parent" data-page-nav-label="Parent" data-page-nav-parent="root">Parent</h3><h3 id="child" data-page-nav-label="Child" data-page-nav-parent="parent">Child</h3>',
+      childId: 'child'
+    }
+  ])('promotes a heading with an invalid $name', ({ html, childId }) => {
+    const root = content(normalizeEditablePageNavigation(html))
+    expect(root.querySelector(`#${childId}`)?.hasAttribute('data-page-nav-parent')).toBe(false)
   })
 })

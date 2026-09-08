@@ -3,7 +3,7 @@ import type { StaticPageResponse, StaticPageSlug, StoredStaticPageResponse } fro
 import { isStaticPageSlug } from '~~/shared/types/static-page'
 import { sanitizeStaticPageHtml } from '~~/shared/utils/static-page-content'
 import { staticPageDetails, staticPageTemplates } from '~/content/static-pages'
-import { listEditablePageHeadings, updateEditablePageHeading } from '~/utils/page-navigation'
+import { listEditablePageHeadings, normalizeEditablePageNavigation, updateEditablePageHeading } from '~/utils/page-navigation'
 import { getStaticPageEditorState, reconcileSavedEditorContent, resolveEditorReadyContent } from '~/utils/static-page-editor-state'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
@@ -140,8 +140,9 @@ function editorLoaded(normalizedHtml: string) {
 
 async function save() {
   if (saving.value || !editorReady.value) return
-  const submittedHtml = contentHtml.value
   saving.value = true
+  const submittedHtml = normalizeEditablePageNavigation(contentHtml.value)
+  contentHtml.value = submittedHtml
   feedback.value = ''
   error.value = ''
   try {

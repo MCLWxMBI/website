@@ -2,6 +2,15 @@
 
 Read this guide before changing repository code or configuration.
 
+## Application code
+
+- Prefer typed Vue components and explicit domain types over untyped objects.
+- Account for Vue template ref auto-unwrapping. Use typed handlers that close
+  over script-side refs, or accept plain values at template boundaries.
+- Keep components focused: pages coordinate data and routing, while reusable
+  display and form behavior belongs in components.
+- Do not add a library when the existing stack can solve the task cleanly.
+
 ## Dependency imports
 
 **Never import directly from filesystem paths inside `node_modules` or from a

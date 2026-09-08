@@ -90,6 +90,10 @@ Changing this panel also changes the page content that will be saved. Use short,
 distinct labels, and keep the order of headings logical. If two headings use the
 same wording, make their short labels distinct.
 
+A nested heading must come after its parent. If you cut and paste a nested
+heading above its parent, ECHO makes that heading top-level when you save so it
+does not disappear from the public navigation.
+
 ## Preview, restore, and publish
 
 The **Public preview** is the best reference for layout, spacing, and styled

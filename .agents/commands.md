@@ -1,6 +1,7 @@
 # Project commands
 
 Use npm for this repository. Run commands from the repository root.
+Keep `package-lock.json` synchronized whenever dependencies change.
 
 | Command | Purpose |
 | --- | --- |
@@ -29,3 +30,7 @@ filename and URL with its password masked before connecting. Reset commands run
 without another prompt for development files. Selecting `.env.production` for
 a reset requires typing the database name exactly. Never run a reset as a
 verification step.
+
+Before handing off application-code or configuration changes, run the smallest
+relevant checks and always run `npm run build`. Report any required check that
+could not be run and explain why.
