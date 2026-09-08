@@ -5,8 +5,54 @@ future API. **MUST** identifies data the frontend cannot reliably derive.
 **SHOULD** identifies data the API should provide, but for which the frontend
 has a deterministic fallback.
 
-The contract describes payload data, not endpoint paths, authentication,
-pagination, or transport envelopes.
+The opportunity contract below describes payload data rather than endpoint
+paths, authentication, pagination, or transport envelopes. Editable static-page
+endpoints are documented separately because their read and write behavior is
+part of that contract.
+
+## Editable static pages
+
+About and Resources are stored as sanitized HTML in `static_pages`. Supported
+slugs are `about` and `resources`.
+
+`GET /api/pages/:slug` and authenticated `GET /api/admin/pages/:slug` return:
+
+~~~ts
+type StaticPageResponse =
+  | {
+      slug: 'about' | 'resources'
+      exists: true
+      contentHtml: string
+      updatedAt: string
+    }
+  | {
+      slug: 'about' | 'resources'
+      exists: false
+      contentHtml: null
+      updatedAt: null
+    }
+~~~
+
+Responses are not cached. A missing row produces the public prepared-content
+state. Navigation is not part of the response: after hydration, the frontend
+finds H1–H3 elements containing `id` and `data-page-nav-label`. An optional
+`data-page-nav-parent` names an earlier top-level heading and creates one nested
+navigation level. Duplicate or malformed entries are ignored.
+
+`PUT /api/admin/pages/:slug` accepts:
+
+~~~ts
+interface UpdateStaticPageRequest {
+  contentHtml: string
+}
+~~~
+
+PUT requires a valid administrator session and CSRF token. It sanitizes the
+HTML, requires an H1 and non-empty text, and upserts the row with the current
+administrator and timestamp. The successful response is the stored `exists:
+true` form above. Saves publish immediately and use last-write-wins behavior.
+Unknown slugs return 404, invalid content returns 400, and unavailable storage
+returns 503 without database details.
 
 ## Opportunity
 

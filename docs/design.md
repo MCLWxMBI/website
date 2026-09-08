@@ -94,7 +94,8 @@ explain what happened and provide a clear reset action.
 
 ### About
 
-The `/about` page introduces the MCLE initiative and the public opportunities
+The `/about` page renders administrator-managed HTML from the `static_pages`
+table and introduces the MCLE initiative and the public opportunities
 it brings together. A centred heading and italic acknowledgement of Country
 lead into the project description, a Roman-numeral list of government and
 public-sector sources, and a reminder that every listing links to its official
@@ -103,21 +104,23 @@ does not run consultations or receive submissions. Before that disclaimer, an
 expanded FAQ explains consultation process types, the five topic categories,
 and four steps for using ECHO.
 
-A compact “On this page” navigation tile links to the About introduction, FAQ,
+A compact “On this page” navigation tile is generated in the browser from
+marked headings in the saved content and links to the About introduction, FAQ,
 and its three main subsections. On wide desktop screens, the article remains
 centred while the tile stays sticky in a balanced right-side rail. At smaller
 widths, the tile moves above the article and scrolls normally with the page.
 
 ### Resources
 
-The `/resources` page presents MCLE's plain-language guide to taking part in
+The `/resources` page renders administrator-managed HTML from the `static_pages`
+table and presents MCLE's plain-language guide to taking part in
 Australian public consultations. It explains public submissions, how to plan
 and structure a contribution, how submissions can influence decisions, what
 should happen after submission, and considerations for consultation designers.
 A static participation checklist helps readers review a submission without
 implying that checklist state is saved.
 
-Resources and About share a compact “On this page” navigation tile. On wide
+Resources and About share a compact browser-generated “On this page” navigation tile. On wide
 desktop screens, the article remains centred while the tile stays sticky in a
 balanced right-side rail. At smaller widths, the tile moves above the article
 and scrolls normally with the page. The Resources page ends with “Further
@@ -203,11 +206,28 @@ current username, and Sign out when authenticated. Preserve the public design
 tokens, visible keyboard focus, and spacious cards. The login form has labelled
 username/password fields, autocomplete, pending feedback, and announced errors.
 
-The protected `/admin` route is a temporary preview, with Pages and Submissions
-tabs. Pages lists About and Resources with public view links and “Editing coming
-soon.” Submissions means consultation listings and contains a coming-soon message.
+The protected `/admin` route has Pages and Submissions tabs. Pages lists About
+and Resources with public view and edit links. Submissions means consultation
+listings and contains a coming-soon message.
 Selection is stored in `?tab=pages|submissions`, defaulting to Pages; tabs support
 Left/Right arrows, Home/End, and labelled panels. Cards stack on mobile.
+
+The protected `/admin/pages/[slug]` editor uses Jodit for familiar rich-text
+editing and application controls for ECHO-specific sections, FAQ entries, lists,
+callouts, prompts, readings, and disclaimers. The editing canvas approximates the
+public styles and a separate preview uses the public content classes. A companion
+navigation panel marks H1–H3 headings for inclusion, short labels, and one level
+of nesting. Content is sanitized on save and is public immediately after a
+successful write.
+
+When no database row exists, the editor displays an unpublished HTML starter
+document that reproduces the former static page. An untouched starter is a clean
+editor state and can be published without first changing it; leave warnings only
+apply after a real edit. The public route shows a prepared-content empty state
+until an administrator saves. Editors may insert linked HTTPS or
+same-site images with alternative text; uploads, revisions, drafts, and private
+preview URLs remain deferred. Jodit's pinned stylesheet is delivered by jsDelivr
+only on editor routes, and a failed stylesheet load produces a retryable error.
 
 Sessions expire 24 hours after login without sliding renewal. Login redirects
 authenticated administrators to the index; protected navigation redirects missing
