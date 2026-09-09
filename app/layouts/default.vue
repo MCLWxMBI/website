@@ -22,6 +22,7 @@ const isAdmin = computed(() => user.value?.role === 'admin')
         <nav aria-label="Primary navigation">
           <NuxtLink to="/" class="nav-link">Opportunities</NuxtLink>
           <NuxtLink to="/resources" class="nav-link">Resources</NuxtLink>
+          <NuxtLink to="/indexes" class="nav-link">Indexes</NuxtLink>
           <NuxtLink to="/about" class="nav-link">About</NuxtLink>
           <NuxtLink :to="isAdmin ? '/admin' : '/admin/login'" class="nav-link">{{ isAdmin ? 'Go to Admin panel' : 'Login for Admins' }}</NuxtLink>
         </nav>
