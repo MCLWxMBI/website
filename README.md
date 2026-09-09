@@ -134,8 +134,8 @@ schema.
 
 ### Reset database data
 
-Clear administrator accounts and managed static-page content while keeping the
-schema and Drizzle migration history:
+Clear website indexes, administrator accounts, and managed static-page content
+while keeping the schema and Drizzle migration history:
 
 ```bash
 npm run db:reset

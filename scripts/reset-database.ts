@@ -8,7 +8,7 @@ export type DatabaseResetScope = 'all' | 'pages'
 
 export const resetStatement = (scope: DatabaseResetScope) => scope === 'pages'
   ? 'TRUNCATE TABLE "static_pages"'
-  : 'TRUNCATE TABLE "static_pages", "users" RESTART IDENTITY'
+  : 'TRUNCATE TABLE "website_indexes", "static_pages", "users" RESTART IDENTITY'
 
 export function productionConfirmationMatches(environmentFile: string, databaseName: string, response: string) {
   return environmentFile === '.env.production' && response === databaseName
@@ -59,7 +59,7 @@ export async function runResetWith(scope: DatabaseResetScope, dependencies: Rese
   await dependencies.reset(environment.databaseUrl, scope)
   dependencies.log(scope === 'pages'
     ? 'Static page content was reset.'
-    : 'Users and static page content were reset.')
+    : 'Website indexes, users, and static page content were reset.')
 }
 
 const scriptPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : ''

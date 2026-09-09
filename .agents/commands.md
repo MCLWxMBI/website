@@ -15,7 +15,7 @@ Keep `package-lock.json` synchronized whenever dependencies change.
 | `npm run db:generate -- --name=description` | Select an environment file, print its masked database URL, and generate migration SQL and metadata. |
 | `npm run db:migrate` | Select an environment file, print its masked database URL, and apply pending migrations to that database. |
 | `npm run user:create` | Select an environment file, print its masked database URL, and create an administrator in that database. |
-| `npm run db:reset` | Select a database, erase all rows from `users` and `static_pages`, and restart identities while retaining schema and migration history. |
+| `npm run db:reset` | Select a database, erase all rows from `website_indexes`, `users`, and `static_pages`, and restart identities while retaining schema and migration history. |
 | `npm run db:reset:pages` | Select a database and erase all rows from `static_pages` while retaining users. |
 
 Generated `.nuxt`, `.output`, `dist`, and `.netlify` files are build
