@@ -15,6 +15,13 @@
       "when": 1788859694635,
       "tag": "0001_add-static-pages",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788930317775,
+      "tag": "0002_large_edwin_jarvis",
+      "breakpoints": true
     }
   ]
 }

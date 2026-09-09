@@ -54,6 +54,28 @@ true` form above. Saves publish immediately and use last-write-wins behavior.
 Unknown slugs return 404, invalid content returns 400, and unavailable storage
 returns 503 without database details.
 
+## Website indexes
+
+`GET /api/indexes` returns the current public indexing status in
+case-insensitive website-name order:
+
+~~~ts
+interface WebsiteIndexResponse {
+  id: string
+  name: string
+  indexUrl: string
+  active: boolean
+}
+
+type WebsiteIndexesResponse = WebsiteIndexResponse[]
+~~~
+
+PostgreSQL bigint IDs are serialized as strings. The internal `notes` column is
+not selected or returned. Responses use `Cache-Control: no-store`. Database
+failures return a generic 503 response; the public page handles that response
+locally and remains available with a table-maintenance message. An empty array
+uses the same public maintenance state.
+
 ## Opportunity
 
 ~~~ts

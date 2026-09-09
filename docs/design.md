@@ -61,8 +61,8 @@ label.
 
 ### Shared shell
 
-The header contains the ECHO brand and Opportunities, Resources, and About
-navigation items, followed by **Login for Admins** linking to `/admin/login` when
+The header contains the ECHO brand and Opportunities, Resources, Indexes, and
+About navigation items, followed by **Login for Admins** linking to `/admin/login` when
 signed out, or **Go to Admin panel** linking to `/admin` for a signed-in
 administrator. The link reacts to the existing session state. Below
 760px, public navigation occupies a wrapping row beneath the brand and the header
@@ -126,6 +126,18 @@ balanced right-side rail. At smaller widths, the tile moves above the article
 and scrolls normally with the page. The Resources page ends with “Further
 readings”; each item is a clearly labelled external link that opens the
 University of Melbourne website in a new tab.
+
+### Website indexes
+
+The public `/indexes` page explains which source websites ECHO checks and shows
+their current indexing status in a three-column table. Website names and URLs
+are accompanied by a written Active or Inactive status and a decorative
+checkmark or cross. The table scrolls horizontally on narrow screens without
+losing its semantic row and column structure.
+
+If no index records are available or the database query fails, the page header
+and explanatory content remain available while the table is replaced by a
+retryable **Table under maintenance** message.
 
 ### Opportunity card
 

@@ -75,7 +75,7 @@ describe('database reset commands', () => {
 
   it('uses fixed statements for page-only and complete data resets', () => {
     expect(resetStatement('pages')).toBe('TRUNCATE TABLE "static_pages"')
-    expect(resetStatement('all')).toBe('TRUNCATE TABLE "static_pages", "users" RESTART IDENTITY')
+    expect(resetStatement('all')).toBe('TRUNCATE TABLE "website_indexes", "static_pages", "users" RESTART IDENTITY')
   })
 
   it('runs development resets without a second confirmation', async () => {

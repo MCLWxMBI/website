@@ -134,8 +134,8 @@ schema.
 
 ### Reset database data
 
-Clear administrator accounts and managed static-page content while keeping the
-schema and Drizzle migration history:
+Clear website indexes, administrator accounts, and managed static-page content
+while keeping the schema and Drizzle migration history:
 
 ```bash
 npm run db:reset
@@ -246,13 +246,21 @@ Server configuration:
 - `NUXT_SESSION_PASSWORD`: session encryption password, at least 32 characters.
 - `NUXT_CSURF_ENCRYPT_SECRET`: stable CSRF encryption key, exactly 32 ASCII characters (32 bytes, not a 64-character hexadecimal encoding). Configure this for production so Functions instances share the same key. The module supplies a temporary development default when omitted.
 
+Login and logout use CSRF tokens through `$csrfFetch`. Protection covers POST,
+PUT, PATCH, and DELETE, including the session deletion endpoint. A rejected
+token prompts the user to reload and retry. Cookies require HTTPS in production.
+
 Keep secrets in ignored environment files locally and in Netlify environment
 variables with Functions scope in production, never in `netlify.toml`.
 The CLI’s `.env.production` file is not automatically used by deployed Functions.
 
-Login and logout use CSRF tokens through `$csrfFetch`. Protection covers POST,
-PUT, PATCH, and DELETE, including the session deletion endpoint. A rejected
-token prompts the user to reload and retry. Cookies require HTTPS in production.
+## Website index status
+
+The public `/indexes` page lists the source websites ECHO checks and reads their
+current Active or Inactive status from `website_indexes`. Internal notes are not
+returned by the public API or displayed in the table. If the table is empty or
+the database cannot be queried, the page remains available and shows a
+retryable **Table under maintenance** message.
 
 ## Backend unit tests
 
