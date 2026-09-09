@@ -39,7 +39,10 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    preset: 'netlify'
+    preset: 'netlify',
+    externals: {
+      inline: ['sanitize-html', 'htmlparser2']
+    }
   },
 
   netlify: {
