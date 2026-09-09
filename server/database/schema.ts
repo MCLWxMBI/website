@@ -1,5 +1,6 @@
 import {
   boolean,
+  integer,
   pgEnum,
   pgTable,
   serial,
@@ -18,5 +19,14 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 })
 
+export const staticPages = pgTable('static_pages', {
+  slug: text('slug').primaryKey(),
+  contentHtml: text('content_html').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: integer('updated_by').references(() => users.id, { onDelete: 'set null' })
+})
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
+export type StaticPage = typeof staticPages.$inferSelect
+export type NewStaticPage = typeof staticPages.$inferInsert
