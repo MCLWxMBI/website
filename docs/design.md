@@ -218,11 +218,18 @@ current username, and Sign out when authenticated. Preserve the public design
 tokens, visible keyboard focus, and spacious cards. The login form has labelled
 username/password fields, autocomplete, pending feedback, and announced errors.
 
-The protected `/admin` route has Pages and Submissions tabs. Pages lists About
-and Resources with public view and edit links. Submissions means consultation
-listings and contains a coming-soon message.
-Selection is stored in `?tab=pages|submissions`, defaulting to Pages; tabs support
-Left/Right arrows, Home/End, and labelled panels. Cards stack on mobile.
+The protected `/admin` route has Pages, Indexes, and Submissions sections. Pages
+lists About and Resources with public view and edit links. Submissions means
+consultation listings and contains a coming-soon message. Selection is stored in
+`?tab=pages|indexes|submissions`, defaulting to Pages. Section links use native
+link keyboard behavior without custom arrow-key controls.
+
+Indexes uses responsive form cards for editing names, HTTPS URLs, active
+statuses, and internal notes. Administrators can add records or stage existing
+records for deletion, with an undo action available until saving. One **Save all
+changes** action locks the form briefly and commits the complete batch. Errors
+leave local edits intact, while successful changes become visible on the public
+Indexes page immediately.
 
 The protected `/admin/pages/[slug]` editor uses Jodit for familiar rich-text
 editing and application controls for ECHO-specific sections, FAQ entries, lists,
