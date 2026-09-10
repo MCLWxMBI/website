@@ -76,6 +76,39 @@ failures return a generic 503 response; the public page handles that response
 locally and remains available with a table-maintenance message. An empty array
 uses the same public maintenance state.
 
+Authenticated `GET /api/admin/indexes` returns the same fields plus internal
+notes:
+
+~~~ts
+interface AdminWebsiteIndex extends WebsiteIndexResponse {
+  notes: string | null
+}
+~~~
+
+Authenticated `PUT /api/admin/indexes` accepts a bulk change set:
+
+~~~ts
+interface UpdateWebsiteIndexesRequest {
+  upserts: Array<{
+    id?: string
+    name: string
+    indexUrl: string
+    active: boolean
+    notes: string | null
+  }>
+  deleteIds: string[]
+}
+~~~
+
+An omitted ID creates a record using PostgreSQL's `bigserial`; existing IDs are
+positive decimal strings. Names are required and limited to 255 characters,
+URLs must be absolute HTTPS URLs, and whitespace-only notes become null. The
+server rejects duplicate, unknown, or update-and-delete IDs. All changes run in
+one transaction and the response is the complete resulting admin collection in
+case-insensitive name order. Validation returns 400, stale IDs return 409, and
+storage failures return a generic 503. PUT requires administrator authorization
+and CSRF protection. Notes never enter the public response.
+
 ## Opportunity
 
 ~~~ts

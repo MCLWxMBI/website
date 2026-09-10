@@ -7,6 +7,10 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  experimental: {
+    watcher: 'builder'
+  },
+
   vite: {
     server: {
       watch: {
