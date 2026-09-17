@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { OpportunityWithStatus } from '~/types/opportunity'
+import { getOpportunityTagGroups } from '~/utils/opportunity-access'
 
 const props = defineProps<{ opportunity: OpportunityWithStatus; returnQuery?: Record<string, string> }>()
+const tagGroups = computed(() => getOpportunityTagGroups(props.opportunity, 2))
 const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', {
   day: 'numeric',
   month: 'short',
@@ -25,8 +27,13 @@ const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', {
       </h2>
       <p class="card-summary">{{ props.opportunity.summary }}</p>
     </div>
-    <div class="tag-list" aria-label="Categories">
-      <span v-for="tag in props.opportunity.tags.slice(0, 2)" :key="tag" class="tag">{{ tag }}</span>
+    <div class="card-tag-groups">
+      <div class="tag-list" aria-label="Categories">
+        <span v-for="category in tagGroups.categories" :key="category" class="tag">{{ category }}</span>
+      </div>
+      <div v-if="tagGroups.tags.length" class="tag-list opportunity-tags" aria-label="Tags">
+        <span v-for="tag in tagGroups.tags" :key="tag" class="tag opportunity-tag">{{ tag }}</span>
+      </div>
     </div>
     <div class="card-footer">
       <div>

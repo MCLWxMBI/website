@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { opportunities } from '~/data/opportunities'
 import { getWebsiteDetails } from '~/data/website-details'
+import { getOpportunityTagGroups } from '~/utils/opportunity-access'
 
 const route = useRoute()
 const opportunity = opportunities.find(item => item.id === route.params.id)
@@ -8,6 +9,7 @@ if (!opportunity) throw createError({ statusCode: 404, statusMessage: 'Opportuni
 const websiteDetails = getWebsiteDetails(opportunity.website)
 const { currentTime } = await useServerTime()
 const status = computed(() => getOpportunityStatus(opportunity, currentTime.value))
+const tagGroups = getOpportunityTagGroups(opportunity)
 
 useSeoMeta({ title: opportunity.title, description: opportunity.summary })
 
@@ -35,8 +37,13 @@ const returnQuery = computed(() => Object.fromEntries(
           <p class="source-org">{{ opportunity.sourceOrg }}</p>
           <h1>{{ opportunity.title }}</h1>
           <p class="detail-lead">{{ opportunity.summary }}</p>
-          <div class="tag-list detail-tags">
-            <span v-for="tag in opportunity.tags" :key="tag" class="tag">{{ tag }}</span>
+          <div class="detail-tag-groups">
+            <div class="tag-list detail-tags" aria-label="Categories">
+              <span v-for="category in tagGroups.categories" :key="category" class="tag">{{ category }}</span>
+            </div>
+            <div v-if="tagGroups.tags.length" class="tag-list detail-tags opportunity-tags" aria-label="Tags">
+              <span v-for="tag in tagGroups.tags" :key="tag" class="tag opportunity-tag">{{ tag }}</span>
+            </div>
           </div>
 
           <section class="detail-section">

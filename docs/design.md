@@ -84,8 +84,13 @@ On desktop, filters occupy a sticky 230px left sidebar and cards appear in three
 columns. The grid falls to two columns below 1050px. Below 760px, cards use one
 column and filters move into a right-side modal drawer.
 
-Search covers titles, summaries, publishers, jurisdictions, and categories.
-Filters cover location, category, and status. Status is derived from the
+Search covers titles, summaries, publishers, jurisdictions, categories, and
+flexible tags. Filters cover location, category, status, and access. The Access
+group contains Public and Invite-only checkboxes; both are selected by default.
+An opportunity is Invite-only when it carries the canonical `Invite-only` tag,
+and every other opportunity is Public. Clearing filters restores both access
+choices. Non-default access choices use `access=public`,
+`access=invite-only`, or `access=none` in the URL. Status is derived from the
 server-synchronised UTC time: an opportunity is closed at or after its
 submission deadline, upcoming before a supplied start time, and open otherwise.
 A missing start time defaults to open until the deadline. Search and filter state is encoded
@@ -146,7 +151,7 @@ Cards use a consistent information order:
 1. Status and jurisdiction.
 2. Publishing organisation.
 3. Opportunity title and concise summary.
-4. Up to two category tags.
+4. Up to two categories, followed by any flexible opportunity tags.
 5. Relevant date and a clear detail-page affordance.
 
 The whole hierarchy should make the title and deadline scannable before
@@ -157,7 +162,7 @@ deadline.
 ### Opportunity detail
 
 The detail route is `/opportunities/[id]`. The main column contains status,
-jurisdiction, publisher, title, summary, categories, and consultation
+jurisdiction, publisher, title, summary, categories, flexible tags, and consultation
 description. A sticky desktop sidebar highlights features of the publisher's
 website, gives the opening date when supplied and always gives the submission
 deadline, and provides a primary link to the official consultation.

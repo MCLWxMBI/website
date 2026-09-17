@@ -122,7 +122,8 @@ interface OpportunityResponse {
   jurisdiction: 'Commonwealth' | 'Victoria'
   startDate: string | null
   submissionDeadline: string
-  tags: OpportunityCategory[]
+  category: OpportunityCategory[]
+  tags: string[] | null
 
   // Recommended; computed by the frontend when absent
   summary?: string
@@ -144,7 +145,8 @@ interface OpportunityResponse {
 | **jurisdiction** | One of the supported jurisdiction values. Do not return an unrecognised free-text value. |
 | **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than `submissionDeadline`. |
 | **submissionDeadline** | ISO 8601 UTC timestamp ending in `Z`. This is the authoritative instant at which the opportunity closes. |
-| **tags** | Array containing at least one supported category, without duplicates. |
+| **category** | Array containing at least one supported category, without duplicates. |
+| **tags** | Flexible display labels, or `null` when the opportunity has none. Values must be trimmed, non-empty, non-null, and unique using case-insensitive comparison. |
 
 Supported categories are:
 
@@ -155,7 +157,9 @@ Supported categories are:
 - Communities & environment
 
 Unknown category and jurisdiction values should be rejected or mapped by the
-API before the response reaches the frontend.
+API before the response reaches the frontend. Tag values are not restricted to
+a predefined list. The canonical `Invite-only` tag identifies opportunities
+that require an invitation and drives the catalogue's Access filter.
 
 ### Fields the API SHOULD return
 
@@ -271,10 +275,11 @@ interface OpportunityLocation {
   "jurisdiction": "Victoria",
   "startDate": "2026-08-17T00:00:00Z",
   "submissionDeadline": "2026-10-23T23:59:59Z",
-  "tags": [
+  "category": [
     "Communities & environment",
     "Climate change"
   ],
+  "tags": null,
   "location": {
     "label": "Melbourne, Victoria",
     "geometry": {
