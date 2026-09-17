@@ -17,10 +17,13 @@ const seed = (
   jurisdiction: Jurisdiction,
   startDate: string | null,
   submissionDeadline: string,
-  tags: OpportunityCategory[],
+  category: OpportunityCategory[],
   focus: string
 ): Seed => ({
-  id, title, summary, sourceOrg, jurisdiction, startDate, submissionDeadline, tags, focus,
+  id, title, summary, sourceOrg, jurisdiction, startDate, submissionDeadline, category, focus,
+  tags: ['offshore-renewables-guidance', 'cultural-landscape-guidelines', 'critical-minerals-review'].includes(id)
+    ? ['Invite-only']
+    : null,
   website: jurisdiction === 'Victoria' ? 'engage-victoria' : 'dcceew-consult',
   sourceUrl: jurisdiction === 'Victoria' ? 'https://engage.vic.gov.au/' : 'https://consult.dcceew.gov.au/'
 })

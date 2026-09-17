@@ -2,6 +2,14 @@
 import { opportunities } from '~/data/opportunities'
 import { jurisdictions, opportunityCategories, opportunityStatuses } from '~/types/opportunity'
 import type { Jurisdiction, OpportunityCategory, OpportunityStatus } from '~/types/opportunity'
+import {
+  defaultOpportunityAccess,
+  matchesOpportunityAccess,
+  matchesOpportunitySearch,
+  parseOpportunityAccess,
+  serializeOpportunityAccess
+} from '~/utils/opportunity-access'
+import type { OpportunityAccess } from '~/utils/opportunity-access'
 
 useSeoMeta({ title: 'Consultation opportunities' })
 
@@ -20,6 +28,7 @@ const search = ref(value('q'))
 const selectedJurisdictions = ref<Jurisdiction[]>(validList(value('location'), jurisdictions))
 const selectedCategories = ref<OpportunityCategory[]>(validList(value('category'), opportunityCategories))
 const selectedStatuses = ref<OpportunityStatus[]>(validList(value('status'), opportunityStatuses))
+const selectedAccess = ref<OpportunityAccess[]>(parseOpportunityAccess(value('access')))
 const page = ref(Math.max(1, Number(value('page')) || 1))
 
 const queryState = computed<Record<string, string>>(() => {
@@ -28,6 +37,8 @@ const queryState = computed<Record<string, string>>(() => {
   if (selectedJurisdictions.value.length) query.location = selectedJurisdictions.value.join(',')
   if (selectedCategories.value.length) query.category = selectedCategories.value.join(',')
   if (selectedStatuses.value.length) query.status = selectedStatuses.value.join(',')
+  const access = serializeOpportunityAccess(selectedAccess.value)
+  if (access) query.access = access
   if (page.value > 1) query.page = String(page.value)
   return query
 })
@@ -45,11 +56,13 @@ const toggle = <T,>(list: Ref<T[]>, item: T) => {
 const toggleJurisdiction = (item: Jurisdiction) => toggle(selectedJurisdictions, item)
 const toggleCategory = (item: OpportunityCategory) => toggle(selectedCategories, item)
 const toggleStatus = (item: OpportunityStatus) => toggle(selectedStatuses, item)
+const toggleAccess = (item: OpportunityAccess) => toggle(selectedAccess, item)
 
 const clearFilters = () => {
   selectedJurisdictions.value = []
   selectedCategories.value = []
   selectedStatuses.value = []
+  selectedAccess.value = [...defaultOpportunityAccess]
   resetPageAndSync()
 }
 
@@ -64,20 +77,20 @@ const opportunitiesWithStatus = computed(() => opportunities.map(opportunity => 
 })))
 
 const filtered = computed(() => {
-  const term = search.value.trim().toLocaleLowerCase()
   return opportunitiesWithStatus.value.filter((item) => {
-    const haystack = [item.title, item.summary, item.sourceOrg, item.jurisdiction, ...item.tags].join(' ').toLocaleLowerCase()
-    return (!term || haystack.includes(term))
+    return matchesOpportunitySearch(item, search.value)
       && (!selectedJurisdictions.value.length || selectedJurisdictions.value.includes(item.jurisdiction))
-      && (!selectedCategories.value.length || item.tags.some(tag => selectedCategories.value.includes(tag)))
+      && (!selectedCategories.value.length || item.category.some(category => selectedCategories.value.includes(category)))
       && (!selectedStatuses.value.length || selectedStatuses.value.includes(item.status))
+      && matchesOpportunityAccess(item, selectedAccess.value)
   })
 })
 
 const pageCount = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))
 const visibleOpportunities = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
-const hasAnyFilter = computed(() => Boolean(search.value || selectedJurisdictions.value.length || selectedCategories.value.length || selectedStatuses.value.length))
-const activeFilterCount = computed(() => selectedJurisdictions.value.length + selectedCategories.value.length + selectedStatuses.value.length)
+const accessIsDefault = computed(() => serializeOpportunityAccess(selectedAccess.value) === undefined)
+const hasAnyFilter = computed(() => Boolean(search.value || selectedJurisdictions.value.length || selectedCategories.value.length || selectedStatuses.value.length || !accessIsDefault.value))
+const activeFilterCount = computed(() => selectedJurisdictions.value.length + selectedCategories.value.length + selectedStatuses.value.length + (accessIsDefault.value ? 0 : 1))
 const openOpportunityCount = computed(() => opportunitiesWithStatus.value.filter(item => item.status === 'open').length)
 
 const goToPage = (nextPage: number) => {
@@ -146,9 +159,11 @@ watch(pageCount, (count) => {
               :selected-jurisdictions="selectedJurisdictions"
               :selected-categories="selectedCategories"
               :selected-statuses="selectedStatuses"
+              :selected-access="selectedAccess"
               @toggle-jurisdiction="toggleJurisdiction"
               @toggle-category="toggleCategory"
               @toggle-status="toggleStatus"
+              @toggle-access="toggleAccess"
               @clear="clearFilters"
             />
           </aside>
@@ -181,9 +196,11 @@ watch(pageCount, (count) => {
           :selected-jurisdictions="selectedJurisdictions"
           :selected-categories="selectedCategories"
           :selected-statuses="selectedStatuses"
+          :selected-access="selectedAccess"
           @toggle-jurisdiction="toggleJurisdiction"
           @toggle-category="toggleCategory"
           @toggle-status="toggleStatus"
+          @toggle-access="toggleAccess"
           @clear="clearFilters"
         />
         <button class="button button-primary drawer-apply" type="button" @click="mobileFiltersOpen = false">Show {{ filtered.length }} results</button>

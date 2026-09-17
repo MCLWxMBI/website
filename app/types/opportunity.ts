@@ -49,7 +49,8 @@ export interface Opportunity {
   jurisdiction: Jurisdiction
   startDate: string | null
   submissionDeadline: string
-  tags: OpportunityCategory[]
+  category: OpportunityCategory[]
+  tags: string[] | null
   location?: OpportunityLocation
 }
 
