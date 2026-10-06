@@ -165,7 +165,7 @@ that require an invitation and drives the catalogue's Access filter.
 
 | Field | API behavior | Frontend fallback |
 | --- | --- | --- |
-| **summary** | Return a concise plain-text summary suitable for an opportunity card. | Use the first non-empty fullText paragraph, whitespace-normalised and truncated for display. |
+| **summary** | Return a concise plain-text summary, ideally 20–30 words and no more than 35 words, suitable for desktop and mobile opportunity cards. Describe the consultation topic and requested input; avoid repeating the title, publisher or deadline. | Use the first non-empty `fullText` paragraph, whitespace-normalised and truncated to at most 35 words. Append an ellipsis when truncated. |
 
 When a recommended field is present, the frontend uses the API value. It only
 computes a fallback when the field is absent or empty. Status is not part of the
