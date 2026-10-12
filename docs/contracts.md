@@ -54,6 +54,27 @@ true` form above. Saves publish immediately and use last-write-wins behavior.
 Unknown slugs return 404, invalid content returns 400, and unavailable storage
 returns 503 without database details.
 
+## Administrator password
+
+Authenticated `POST /api/admin/password` accepts:
+
+~~~ts
+interface ChangeAdminPasswordRequest {
+  newPassword: string
+  confirmPassword: string
+}
+~~~
+
+Both fields must be non-empty strings and match exactly; whitespace is preserved.
+The endpoint requires an enabled administrator session and CSRF protection. The
+account is taken exclusively from the session. Only its Scrypt password hash is
+updated, and success returns `{ success: true }`. Existing sessions and their
+expiry remain unchanged. Passwords and hashes are never returned or logged.
+
+Invalid input returns 400, an invalid account or session returns 401, CSRF
+rejection returns 403, and hashing or storage failure returns a generic 503.
+Responses inherit the admin API's private, no-store caching policy.
+
 ## Website indexes
 
 `GET /api/indexes` returns the current public indexing status in
