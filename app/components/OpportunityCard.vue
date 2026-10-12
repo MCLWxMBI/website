@@ -2,7 +2,7 @@
 import type { OpportunityWithStatus } from '~/types/opportunity'
 import { getOpportunityTagGroups } from '~/utils/opportunity-access'
 
-const props = defineProps<{ opportunity: OpportunityWithStatus; returnQuery?: Record<string, string> }>()
+const props = defineProps<{ opportunity: OpportunityWithStatus; returnQuery?: Record<string, string | string[]> }>()
 const tagGroups = computed(() => getOpportunityTagGroups(props.opportunity, 2))
 const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', {
   day: 'numeric',

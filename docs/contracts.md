@@ -141,7 +141,7 @@ interface OpportunityResponse {
 | **title** | Non-empty human-readable consultation title. |
 | **fullText** | Ordered array of one or more non-empty plain-text paragraphs. HTML must not be returned in this field. |
 | **sourceUrl** | Absolute HTTPS URL for the official consultation page. |
-| **sourceOrg** | Non-empty name of the publishing organisation. |
+| **sourceOrg** | Non-empty name of the publishing organisation running the consultation. Used as the Authority filter value; source websites are separate. The frontend derives unique, alphabetically sorted options from the complete opportunity collection and matches exact names. |
 | **jurisdiction** | One of the supported jurisdiction values. Do not return an unrecognised free-text value. |
 | **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than `submissionDeadline`. |
 | **submissionDeadline** | ISO 8601 UTC timestamp ending in `Z`. This is the authoritative instant at which the opportunity closes. |

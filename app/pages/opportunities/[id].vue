@@ -2,6 +2,7 @@
 import { opportunities } from '~/data/opportunities'
 import { getWebsiteDetails } from '~/data/website-details'
 import { getOpportunityTagGroups } from '~/utils/opportunity-access'
+import { getOpportunityReturnQuery } from '~/utils/opportunity-authority'
 
 const route = useRoute()
 const opportunity = opportunities.find(item => item.id === route.params.id)
@@ -19,9 +20,7 @@ const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', {
   year: 'numeric',
   timeZone: 'UTC'
 }).format(new Date(date))
-const returnQuery = computed(() => Object.fromEntries(
-  Object.entries(route.query).filter(([, value]) => typeof value === 'string')
-) as Record<string, string>)
+const returnQuery = computed(() => getOpportunityReturnQuery(route.query))
 </script>
 
 <template>

@@ -9,6 +9,7 @@ import {
   parseOpportunityAccess,
   serializeOpportunityAccess
 } from '~/utils/opportunity-access'
+import { getOpportunityAuthorities, matchesOpportunityAuthority, parseOpportunityAuthorities, serializeOpportunityAuthorities } from '~/utils/opportunity-authority'
 import type { OpportunityAccess } from '~/utils/opportunity-access'
 
 useSeoMeta({ title: 'Consultation opportunities' })
@@ -24,6 +25,8 @@ const value = (key: string) => typeof route.query[key] === 'string' ? route.quer
 const validList = <T extends string>(raw: string, valid: readonly T[]) =>
   raw.split(',').filter((item): item is T => valid.includes(item as T))
 
+const authorities = getOpportunityAuthorities(opportunities)
+const selectedAuthorities = ref(parseOpportunityAuthorities(route.query.authority, authorities))
 const search = ref(value('q'))
 const selectedJurisdictions = ref<Jurisdiction[]>(validList(value('location'), jurisdictions))
 const selectedCategories = ref<OpportunityCategory[]>(validList(value('category'), opportunityCategories))
@@ -31,11 +34,13 @@ const selectedStatuses = ref<OpportunityStatus[]>(validList(value('status'), opp
 const selectedAccess = ref<OpportunityAccess[]>(parseOpportunityAccess(value('access')))
 const page = ref(Math.max(1, Number(value('page')) || 1))
 
-const queryState = computed<Record<string, string>>(() => {
-  const query: Record<string, string> = {}
+const queryState = computed<Record<string, string | string[]>>(() => {
+  const query: Record<string, string | string[]> = {}
   if (search.value.trim()) query.q = search.value.trim()
   if (selectedJurisdictions.value.length) query.location = selectedJurisdictions.value.join(',')
   if (selectedCategories.value.length) query.category = selectedCategories.value.join(',')
+  const authority = serializeOpportunityAuthorities(selectedAuthorities.value)
+  if (authority) query.authority = authority
   if (selectedStatuses.value.length) query.status = selectedStatuses.value.join(',')
   const access = serializeOpportunityAccess(selectedAccess.value)
   if (access) query.access = access
@@ -56,9 +61,11 @@ const toggle = <T,>(list: Ref<T[]>, item: T) => {
 const toggleJurisdiction = (item: Jurisdiction) => toggle(selectedJurisdictions, item)
 const toggleCategory = (item: OpportunityCategory) => toggle(selectedCategories, item)
 const toggleStatus = (item: OpportunityStatus) => toggle(selectedStatuses, item)
+const toggleAuthority = (item: string) => toggle(selectedAuthorities, item)
 const toggleAccess = (item: OpportunityAccess) => toggle(selectedAccess, item)
 
 const clearFilters = () => {
+  selectedAuthorities.value = []
   selectedJurisdictions.value = []
   selectedCategories.value = []
   selectedStatuses.value = []
@@ -79,6 +86,7 @@ const opportunitiesWithStatus = computed(() => opportunities.map(opportunity => 
 const filtered = computed(() => {
   return opportunitiesWithStatus.value.filter((item) => {
     return matchesOpportunitySearch(item, search.value)
+      && matchesOpportunityAuthority(item, selectedAuthorities.value)
       && (!selectedJurisdictions.value.length || selectedJurisdictions.value.includes(item.jurisdiction))
       && (!selectedCategories.value.length || item.category.some(category => selectedCategories.value.includes(category)))
       && (!selectedStatuses.value.length || selectedStatuses.value.includes(item.status))
@@ -89,8 +97,8 @@ const filtered = computed(() => {
 const pageCount = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))
 const visibleOpportunities = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 const accessIsDefault = computed(() => serializeOpportunityAccess(selectedAccess.value) === undefined)
-const hasAnyFilter = computed(() => Boolean(search.value || selectedJurisdictions.value.length || selectedCategories.value.length || selectedStatuses.value.length || !accessIsDefault.value))
-const activeFilterCount = computed(() => selectedJurisdictions.value.length + selectedCategories.value.length + selectedStatuses.value.length + (accessIsDefault.value ? 0 : 1))
+const hasAnyFilter = computed(() => Boolean(search.value || selectedAuthorities.value.length || selectedJurisdictions.value.length || selectedCategories.value.length || selectedStatuses.value.length || !accessIsDefault.value))
+const activeFilterCount = computed(() => selectedAuthorities.value.length + selectedJurisdictions.value.length + selectedCategories.value.length + selectedStatuses.value.length + (accessIsDefault.value ? 0 : 1))
 const openOpportunityCount = computed(() => opportunitiesWithStatus.value.filter(item => item.status === 'open').length)
 
 const goToPage = (nextPage: number) => {
@@ -103,8 +111,16 @@ const goToPage = (nextPage: number) => {
   })
 }
 
-watch(search, resetPageAndSync)
-watch(() => route.query.page, () => {
+watch(search, () => {
+  if (search.value !== value('q')) resetPageAndSync()
+})
+watch(() => route.query, () => {
+  search.value = value('q')
+  selectedAuthorities.value = parseOpportunityAuthorities(route.query.authority, authorities)
+  selectedJurisdictions.value = validList(value('location'), jurisdictions)
+  selectedCategories.value = validList(value('category'), opportunityCategories)
+  selectedStatuses.value = validList(value('status'), opportunityStatuses)
+  selectedAccess.value = parseOpportunityAccess(value('access'))
   page.value = Math.min(Math.max(1, Number(value('page')) || 1), pageCount.value)
 })
 watch(pageCount, (count) => {
@@ -156,6 +172,9 @@ watch(pageCount, (count) => {
         <div class="listing-layout">
           <aside class="filter-sidebar">
             <OpportunityFilters
+              :authorities="authorities"
+              :selected-authorities="selectedAuthorities"
+              @toggle-authority="toggleAuthority"
               :selected-jurisdictions="selectedJurisdictions"
               :selected-categories="selectedCategories"
               :selected-statuses="selectedStatuses"
@@ -193,6 +212,9 @@ watch(pageCount, (count) => {
       <aside class="filter-drawer" role="dialog" aria-modal="true" aria-label="Filter opportunities">
         <button class="drawer-close" type="button" aria-label="Close filters" @click="mobileFiltersOpen = false">×</button>
         <OpportunityFilters
+          :authorities="authorities"
+          :selected-authorities="selectedAuthorities"
+          @toggle-authority="toggleAuthority"
           :selected-jurisdictions="selectedJurisdictions"
           :selected-categories="selectedCategories"
           :selected-statuses="selectedStatuses"
