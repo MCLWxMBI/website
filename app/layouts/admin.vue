@@ -26,6 +26,7 @@ async function signOut() {
         <nav aria-label="Admin navigation" class="admin-actions">
           <NuxtLink to="/">View public site</NuxtLink>
           <span v-if="user">{{ user.username }}</span>
+          <NuxtLink v-if="user" to="/admin/change-password">Change password</NuxtLink>
           <button v-if="user" class="button button-primary" :disabled="pending" @click="signOut">{{ pending ? 'Signing out…' : 'Sign out' }}</button>
         </nav>
       </div>

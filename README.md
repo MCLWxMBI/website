@@ -234,6 +234,12 @@ For signed-in administrators, the header instead shows **Go to Admin panel**,
 linking directly to `/admin`. The link follows the existing session state after
 refresh, login, and logout; signed-out visitors see **Login for Admins**.
 
+Use **Change password** beside your username in the admin header, or visit
+`/admin/change-password`, to change your own password. Enter a non-empty new
+password and re-type it exactly, including any whitespace. Your current password
+is not required. The new password applies to future logins; existing sign-ins
+and their expiry remain unchanged. No database migration is needed.
+
 Administrator sessions expire 24 hours after login. Sign in again after expiry; signing out ends the current session immediately.
 
 The session and cookie lifetime is 86,400 seconds. Requests do not extend the
@@ -246,7 +252,7 @@ Server configuration:
 - `NUXT_SESSION_PASSWORD`: session encryption password, at least 32 characters.
 - `NUXT_CSURF_ENCRYPT_SECRET`: stable CSRF encryption key, exactly 32 ASCII characters (32 bytes, not a 64-character hexadecimal encoding). Configure this for production so Functions instances share the same key. The module supplies a temporary development default when omitted.
 
-Login and logout use CSRF tokens through `$csrfFetch`. Protection covers POST,
+Login, logout, and password changes use CSRF tokens through `$csrfFetch`. Protection covers POST,
 PUT, PATCH, and DELETE, including the session deletion endpoint. A rejected
 token prompts the user to reload and retry. Cookies require HTTPS in production.
 

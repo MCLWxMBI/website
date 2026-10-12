@@ -2,13 +2,14 @@ import { beforeAll, beforeEach, afterEach, describe, expect, it, vi } from 'vite
 import { Hash } from '@adonisjs/hash'
 import { Scrypt } from '@adonisjs/hash/drivers/scrypt'
 import type { User } from '../../server/database/schema'
-import { authenticateAdmin, authorizeAdmin } from '../../server/services/admin-auth'
+import { authenticateAdmin, authorizeAdmin, changeAdminPassword } from '../../server/services/admin-auth'
 import { getUserSession, replaceUserSession, clearUserSession } from '../support/nitro-imports'
 import { logoutAdmin } from '../../app/utils/admin-logout'
 
-const repository = vi.hoisted(() => ({ byId: vi.fn(), byUsername: vi.fn() }))
+const repository = vi.hoisted(() => ({ byId: vi.fn(), byUsername: vi.fn(), updatePassword: vi.fn() }))
 vi.mock('../../server/utils/admin-repository', () => ({ adminRepository: repository }))
 vi.mock('h3', async (original) => ({ ...await original<typeof import('h3')>(), readBody: vi.fn(async () => body) }))
+import changePassword from '../../server/api/admin/password.post'
 import login from '../../server/api/admin/login.post'
 import sessionHandler from '../../server/api/admin/session.get'
 let body: unknown
@@ -27,6 +28,7 @@ beforeEach(() => {
   repository.byUsername.mockResolvedValue({ ...account })
   repository.byId.mockResolvedValue({ ...account })
   getUserSession.mockResolvedValue(session())
+  repository.updatePassword.mockResolvedValue(true)
   body = { username: ' ADMIN ', password: ' password ' }
 })
 afterEach(() => vi.useRealTimers())
@@ -109,5 +111,78 @@ describe('logout wrapper', () => {
     const failure = new Error('CSRF rejected')
     await expect(logoutAdmin(() => Promise.reject(failure), refresh)).rejects.toBe(failure)
     expect(refresh).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('administrator password changes', () => {
+  const newPassword = ' new password '
+  const passwordBody = () => ({ newPassword, confirmPassword: newPassword })
+
+  it('updates only the session account with a compatible hash and leaves sessions unchanged', async () => {
+    body = { ...passwordBody(), id: 999, username: 'another-admin' }
+    expect(await changePassword(event)).toEqual({ success: true })
+    const [id, hash] = repository.updatePassword.mock.calls[0]!
+    expect(id).toBe(identity.id)
+    expect(hash).not.toBe(newPassword)
+    const hasher = new Hash(new Scrypt({}))
+    expect(await hasher.verify(hash, newPassword)).toBe(true)
+    expect(await hasher.verify(hash, newPassword.trim())).toBe(false)
+    expect(await hasher.verify(hash, ' password ')).toBe(false)
+    repository.byUsername.mockResolvedValue({ ...account, passwordHash: hash })
+    repository.byId.mockResolvedValue({ ...account, passwordHash: hash })
+    await expect(authenticateAdmin({ username: 'admin', password: ' password ' }, repository)).rejects.toMatchObject({ statusCode: 401 })
+    expect((await authenticateAdmin({ username: 'admin', password: newPassword }, repository)).user).toEqual(identity)
+    expect(await sessionHandler(event)).toEqual(session())
+    const otherSession = { ...session(), expiresAt: session().expiresAt - 1000 }
+    expect(await authorizeAdmin(otherSession, repository)).toEqual(otherSession)
+    expect(replaceUserSession).not.toHaveBeenCalled()
+    expect(clearUserSession).not.toHaveBeenCalled()
+  })
+
+  it.each([null, [], {}, { newPassword: 1, confirmPassword: '1' }, { newPassword: 'x', confirmPassword: [] },
+    { newPassword: '', confirmPassword: '' }, { newPassword: 'x', confirmPassword: '' },
+    { newPassword: ' x ', confirmPassword: 'x' }])('rejects invalid password input %j', async (value) => {
+    body = value
+    await expect(changePassword(event)).rejects.toMatchObject({ statusCode: 400 })
+    expect(repository.updatePassword).not.toHaveBeenCalled()
+  })
+
+  it('keeps the existing non-empty rule, including whitespace-only passwords', async () => {
+    await changeAdminPassword(identity.id, { newPassword: ' ', confirmPassword: ' ' }, repository)
+    expect(await new Hash(new Scrypt({})).verify(repository.updatePassword.mock.calls[0]![1], ' ')).toBe(true)
+  })
+
+  it.each(['signed-out', 'expired', 'disabled', 'demoted', 'deleted'])('rejects a %s account before updating', async state => {
+    body = passwordBody()
+    if (state === 'signed-out') getUserSession.mockResolvedValue({})
+    if (state === 'expired') vi.setSystemTime(session().expiresAt)
+    if (state === 'disabled') repository.byId.mockResolvedValue({ ...account, disabled: true })
+    if (state === 'demoted') repository.byId.mockResolvedValue({ ...account, role: 'user' })
+    if (state === 'deleted') repository.byId.mockResolvedValue(undefined)
+    await expect(changePassword(event)).rejects.toMatchObject({ statusCode: 401 })
+    expect(repository.updatePassword).not.toHaveBeenCalled()
+  })
+
+  it('rejects an account that becomes ineligible before the conditional update', async () => {
+    body = passwordBody()
+    repository.updatePassword.mockResolvedValue(false)
+    await expect(changePassword(event)).rejects.toMatchObject({ statusCode: 401 })
+  })
+
+  it('sanitizes storage failures without replacing sessions', async () => {
+    body = passwordBody()
+    repository.updatePassword.mockRejectedValue(new Error('sensitive database URL'))
+    await expect(changePassword(event)).rejects.toMatchObject({ statusCode: 503, statusMessage: 'Unable to change your password. Please try again.' })
+    expect(replaceUserSession).not.toHaveBeenCalled()
+  })
+
+  it('sanitizes hashing failures without writing a password', async () => {
+    body = passwordBody()
+    const make = vi.spyOn(Hash.prototype, 'make').mockRejectedValueOnce(new Error('sensitive hashing error'))
+    try {
+      await expect(changePassword(event)).rejects.toMatchObject({ statusCode: 503, statusMessage: 'Unable to change your password. Please try again.' })
+      expect(repository.updatePassword).not.toHaveBeenCalled()
+    } finally { make.mockRestore() }
   })
 })

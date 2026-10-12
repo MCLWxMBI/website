@@ -1,6 +1,7 @@
 import { Hash } from '@adonisjs/hash'
 import { Scrypt } from '@adonisjs/hash/drivers/scrypt'
 import { createError } from 'h3'
+import { validateAdminPassword } from '../../shared/utils/admin-password'
 import type { User } from '../database/schema'
 import type { AdminSession } from '../../shared/types/auth'
 
@@ -43,4 +44,22 @@ export async function authorizeAdmin(session: Partial<AdminSession>, repository:
     throw createError({ statusCode: 401, statusMessage: 'Please sign in again.' })
   }
   return { user: { id: account.id, username: account.username, role: 'admin' }, expiresAt: session.expiresAt! }
+}
+
+export interface AdminPasswordRepository {
+  updatePassword: (id: number, passwordHash: string) => Promise<boolean>
+}
+
+export async function changeAdminPassword(id: number, body: unknown, repository: AdminPasswordRepository): Promise<void> {
+  const error = validateAdminPassword(body)
+  if (error) throw createError({ statusCode: 400, statusMessage: error })
+  const { newPassword } = body as { newPassword: string }
+  let updated: boolean
+  try {
+    const passwordHash = await hasher.make(newPassword)
+    updated = await repository.updatePassword(id, passwordHash)
+  } catch {
+    throw createError({ statusCode: 503, statusMessage: 'Unable to change your password. Please try again.' })
+  }
+  if (!updated) throw createError({ statusCode: 401, statusMessage: 'Please sign in again.' })
 }
