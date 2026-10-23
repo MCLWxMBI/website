@@ -1,8 +1,6 @@
-import type { WebsiteKey } from '~/types/opportunity'
-
-const websiteDetails: Record<WebsiteKey, string[]> = {
+const websiteDetails: Record<string, string[]> = {
   'engage-victoria': ['Login required', 'Online submission'],
   'dcceew-consult': ['Online submission']
 }
 
-export const getWebsiteDetails = (website: WebsiteKey): string[] => websiteDetails[website]
+export const getWebsiteDetails = (website: string): string[] => websiteDetails[website] ?? []

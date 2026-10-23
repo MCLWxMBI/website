@@ -1,0 +1,432 @@
+{
+  "id": "85fb844b-4590-424b-9528-a42cb3044539",
+  "prevId": "c96c8c2c-7c0c-4c60-a4ed-5847d832a33e",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.article_history": {
+      "name": "article_history",
+      "schema": "",
+      "columns": {
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hash": {
+          "name": "hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleted": {
+          "name": "deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "article_history_source_url_https": {
+          "name": "article_history_source_url_https",
+          "value": "\"article_history\".\"source_url\" ~ '^https://[^[:space:]]+$'"
+        },
+        "article_history_title_nonempty": {
+          "name": "article_history_title_nonempty",
+          "value": "\"article_history\".\"title\" ~ '[^[:space:]]'"
+        },
+        "article_history_hash_valid": {
+          "name": "article_history_hash_valid",
+          "value": "\"article_history\".\"hash\" IS NULL OR \"article_history\".\"hash\" ~ '^[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.opportunities": {
+      "name": "opportunities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_text": {
+          "name": "full_text",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "website_id": {
+          "name": "website_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_org": {
+          "name": "source_org",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jurisdiction": {
+          "name": "jurisdiction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submission_deadline": {
+          "name": "submission_deadline",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tags": {
+          "name": "tags",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location": {
+          "name": "location",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "opportunities_website_id_websites_id_fk": {
+          "name": "opportunities_website_id_websites_id_fk",
+          "tableFrom": "opportunities",
+          "tableTo": "websites",
+          "columnsFrom": [
+            "website_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "opportunities_source_url_unique": {
+          "name": "opportunities_source_url_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "source_url"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "opportunities_id_nonempty": {
+          "name": "opportunities_id_nonempty",
+          "value": "\"opportunities\".\"id\" ~ '[^[:space:]]'"
+        },
+        "opportunities_title_nonempty": {
+          "name": "opportunities_title_nonempty",
+          "value": "\"opportunities\".\"title\" ~ '[^[:space:]]'"
+        },
+        "opportunities_full_text_valid": {
+          "name": "opportunities_full_text_valid",
+          "value": "public.opportunity_text_array_valid(\"opportunities\".\"full_text\")"
+        },
+        "opportunities_source_url_https": {
+          "name": "opportunities_source_url_https",
+          "value": "\"opportunities\".\"source_url\" ~ '^https://[^[:space:]]+$'"
+        },
+        "opportunities_source_org_nonempty": {
+          "name": "opportunities_source_org_nonempty",
+          "value": "\"opportunities\".\"source_org\" ~ '[^[:space:]]'"
+        },
+        "opportunities_jurisdiction_valid": {
+          "name": "opportunities_jurisdiction_valid",
+          "value": "\"opportunities\".\"jurisdiction\" IN ('Commonwealth', 'Victoria')"
+        },
+        "opportunities_deadline_finite": {
+          "name": "opportunities_deadline_finite",
+          "value": "isfinite(\"opportunities\".\"submission_deadline\")"
+        },
+        "opportunities_category_valid": {
+          "name": "opportunities_category_valid",
+          "value": "public.opportunity_text_array_valid(\"opportunities\".\"category\", TRUE)\n    AND \"opportunities\".\"category\" <@ ARRAY[\n      'Biodiversity & ecosystems', 'Climate change', 'First Nations & cultural heritage',\n      'Water & resources', 'Communities & environment'\n    ]::TEXT[]"
+        },
+        "opportunities_tags_valid": {
+          "name": "opportunities_tags_valid",
+          "value": "\"opportunities\".\"tags\" IS NULL OR public.opportunity_text_array_valid(\"opportunities\".\"tags\", TRUE)"
+        },
+        "opportunities_summary_nonempty": {
+          "name": "opportunities_summary_nonempty",
+          "value": "\"opportunities\".\"summary\" IS NULL OR \"opportunities\".\"summary\" ~ '[^[:space:]]'"
+        },
+        "opportunities_location_valid": {
+          "name": "opportunities_location_valid",
+          "value": "\"opportunities\".\"location\" IS NULL OR (\n    jsonb_typeof(\"opportunities\".\"location\") = 'object'\n    AND jsonb_typeof(\"opportunities\".\"location\" -> 'label') = 'string'\n    AND (\"opportunities\".\"location\" ->> 'label') ~ '[^[:space:]]'\n    AND jsonb_typeof(\"opportunities\".\"location\" -> 'geometry') = 'object'\n    AND \"opportunities\".\"location\" -> 'geometry' ->> 'type' IN ('Point', 'Polygon', 'MultiPolygon')\n    AND jsonb_typeof(\"opportunities\".\"location\" -> 'geometry' -> 'coordinates') = 'array'\n  ) IS TRUE"
+        },
+        "opportunities_date_order": {
+          "name": "opportunities_date_order",
+          "value": "\"opportunities\".\"start_date\" IS NULL OR (isfinite(\"opportunities\".\"start_date\") AND \"opportunities\".\"start_date\" <= \"opportunities\".\"submission_deadline\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.static_pages": {
+      "name": "static_pages",
+      "schema": "",
+      "columns": {
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "content_html": {
+          "name": "content_html",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "static_pages_updated_by_users_id_fk": {
+          "name": "static_pages_updated_by_users_id_fk",
+          "tableFrom": "static_pages",
+          "tableTo": "users",
+          "columnsFrom": [
+            "updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "user_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'user'"
+        },
+        "disabled": {
+          "name": "disabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_username_unique": {
+          "name": "users_username_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "username"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.website_indexes": {
+      "name": "website_indexes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "index_url": {
+          "name": "index_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.websites": {
+      "name": "websites",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tags": {
+          "name": "tags",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "websites_id_nonempty": {
+          "name": "websites_id_nonempty",
+          "value": "\"websites\".\"id\" ~ '[^[:space:]]'"
+        },
+        "websites_tags_valid": {
+          "name": "websites_tags_valid",
+          "value": "cardinality(\"websites\".\"tags\") = 0 OR public.opportunity_text_array_valid(\"websites\".\"tags\", TRUE)"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.user_role": {
+      "name": "user_role",
+      "schema": "public",
+      "values": [
+        "user",
+        "admin"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

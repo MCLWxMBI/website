@@ -12,6 +12,7 @@
     "generate": "nuxt generate",
     "postinstall": "nuxt prepare",
     "user:create": "tsx scripts/create-user.ts",
+    "test:database": "tsx scripts/test-database.ts",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest"
   },

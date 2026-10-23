@@ -139,6 +139,7 @@ interface OpportunityResponse {
   title: string
   fullText: string[]
   sourceUrl: string
+  website: string
   sourceOrg: string
   jurisdiction: 'Commonwealth' | 'Victoria'
   startDate: string | null
@@ -162,6 +163,7 @@ interface OpportunityResponse {
 | **title** | Non-empty human-readable consultation title. |
 | **fullText** | Ordered array of one or more non-empty plain-text paragraphs. HTML must not be returned in this field. |
 | **sourceUrl** | Absolute HTTPS URL for the official consultation page. |
+| **website** | Stable source-platform key referencing `websites.id`, stored as `opportunities.website_id`. Used to retrieve website-feature tags; separate from the publishing organisation and opportunity tags. |
 | **sourceOrg** | Non-empty name of the publishing organisation running the consultation. Used as the Authority filter value; source websites are separate. The frontend derives unique, alphabetically sorted options from the complete opportunity collection and matches exact names. |
 | **jurisdiction** | One of the supported jurisdiction values. Do not return an unrecognised free-text value. |
 | **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than `submissionDeadline`. |
@@ -236,6 +238,22 @@ create table websites (
 - Tags must be non-empty plain-text values. HTML must not be stored in the
   array.
 
+The table and the required `opportunities.website_id` foreign key are included
+in migration `0003_shared-scraper-schema`. A website's tags may be an empty
+array when it has no features to display; existing values must be trimmed and
+unique using case-insensitive comparison. Referenced websites cannot be deleted.
+`website_indexes` remains the independent numeric-ID registry of scraper entry
+points; its IDs are not website-feature keys.
+
+Persistence uses snake_case columns, while the response uses camelCase, including
+`website_id` → `website`. Timestamps are serialized in UTC ending in `Z`.
+SQL null tags/start dates remain JSON null; null summary/location fields are
+omitted. `serializeOpportunity` provides this mapping and `toOpportunity`
+constructs the frontend model with the summary fallback. These helpers are
+prepared for the future API; the current public catalogue still uses prototype
+data. See [Scraper database integration](scraper-database.md) for writer and
+deletion requirements.
+
 The backend retrieves the tags for one website using the equivalent of:
 
 ~~~sql
@@ -292,6 +310,7 @@ interface OpportunityLocation {
     "Sustainability Victoria is seeking input on stewardship obligations and recovery targets."
   ],
   "sourceUrl": "https://engage.vic.gov.au/",
+  "website": "engage-victoria",
   "sourceOrg": "Sustainability Victoria",
   "jurisdiction": "Victoria",
   "startDate": "2026-08-17T00:00:00Z",

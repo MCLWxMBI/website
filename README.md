@@ -83,9 +83,10 @@ database selected at the prompt:
 npm run db:migrate
 ```
 
-This creates the `users` and `static_pages` tables and the `user_role` enum. It
-also records the applied migrations so rerunning the command does not recreate
-the tables.
+This creates `users`, `static_pages`, `website_indexes`, `websites`,
+`opportunities`, and `article_history`, plus the `user_role` enum and opportunity
+validation/deletion functions and triggers. It records the applied migrations
+so rerunning the command does not recreate the tables.
 
 When the Drizzle schema changes in the future, generate and review a new
 migration before applying it:
@@ -94,6 +95,16 @@ migration before applying it:
 npm run db:generate -- --name=describe-the-change
 npm run db:migrate
 ```
+
+Keep existing migration SQL and snapshots unchanged. Opportunity validation
+functions and deletion triggers are maintained explicitly in new migration SQL;
+review their ordering as well as the generated tables and constraints.
+
+The public opportunity catalogue still uses prototype data. The persistence
+schema and mapping helpers are ready for future API integration. Scraper writers
+must supply a unique canonical source URL and a `website_id` referencing
+`websites.id`. See [Scraper database integration](docs/scraper-database.md) for
+the writer protocol, validation responsibilities, and deletion behavior.
 
 ### Create an administrator
 
@@ -134,8 +145,9 @@ schema.
 
 ### Reset database data
 
-Clear website indexes, administrator accounts, and managed static-page content
-while keeping the schema and Drizzle migration history:
+Clear opportunities, article history, website features, website indexes,
+administrator accounts, and managed static-page content while keeping the schema
+and Drizzle migration history:
 
 ```bash
 npm run db:reset
@@ -152,6 +164,11 @@ Development targets reset immediately after selection. Selecting
 `.env.production` requires typing the parsed database name exactly; cancelling
 or entering anything else leaves the database unchanged. Resets do not recreate
 tables or rerun migrations.
+
+The full reset clears opportunities and their history together, intentionally
+removing deletion suppression. Ordinary opportunity deletion uses `DELETE` and
+retains its history; `TRUNCATE` bypasses the deletion triggers. Never use a reset
+as a migration-verification step.
 
 ## Dev container
 
@@ -291,3 +308,22 @@ module integration coverage are deferred. No end-to-end or browser tests are
 included.
 
 Run `npm run build` after application or configuration changes.
+
+## PostgreSQL migration tests
+
+Run the separate database suite with:
+
+```bash
+npm run test:database
+```
+
+Select an environment file as with other database commands. Its PostgreSQL role
+must have `CREATEDB`. The suite creates randomly named disposable databases on
+that server, tests both fresh migrations and upgrades from `0002`, and drops only
+those databases afterward. It does not migrate, reset, or copy data from the
+selected database. Prefer a development server. If a run is forcibly interrupted,
+its `echo_schema_test_*` databases may need manual cleanup.
+
+Coverage includes URL uniqueness, website features, array/date constraints,
+deletion suppression, hash retention, transaction rollback, and response mapping.
+`npm run test:unit` remains independent of PostgreSQL and environment files.

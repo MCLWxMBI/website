@@ -9,13 +9,14 @@ Keep `package-lock.json` synchronized whenever dependencies change.
 | `npx playwright install chromium` | Download Chromium to Playwright's browser cache after dependency installation. Not required by backend unit tests. |
 | `npm run test:unit` | Run Vitest tests once, in process, without a database, environment files, application server, or browser. Static-page navigation tests use Happy DOM. |
 | `npm run test:unit:watch` | Watch and rerun the Vitest suite. |
+| `npm run test:database` | Select an environment and verify migrations and persistence in new disposable databases on that PostgreSQL server. Requires `CREATEDB`; never resets the selected database. |
 | `npm run dev` | Start Nuxt with local Netlify platform emulation provided by `@netlify/nuxt`. |
 | `npm run build` | Create the production Netlify Functions build and the `dist` publish directory. |
 | `npm run generate` | Generate a pre-rendered build when static output is required. |
 | `npm run db:generate -- --name=description` | Select an environment file, print its masked database URL, and generate migration SQL and metadata. |
 | `npm run db:migrate` | Select an environment file, print its masked database URL, and apply pending migrations to that database. |
 | `npm run user:create` | Select an environment file, print its masked database URL, and create an administrator in that database. |
-| `npm run db:reset` | Select a database, erase all rows from `website_indexes`, `users`, and `static_pages`, and restart identities while retaining schema and migration history. |
+| `npm run db:reset` | Select a database, erase opportunities, article history, websites, website indexes, users, and static pages, and restart identities while retaining schema and migration history. |
 | `npm run db:reset:pages` | Select a database and erase all rows from `static_pages` while retaining users. |
 
 Generated `.nuxt`, `.output`, `dist`, and `.netlify` files are build
