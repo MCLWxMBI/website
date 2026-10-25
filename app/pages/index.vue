@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sortOpportunitiesByDeadline } from '~~/shared/utils/opportunity-deadline'
 import { opportunities } from '~/data/opportunities'
 import { jurisdictions, opportunityCategories, opportunityStatuses } from '~/types/opportunity'
 import type { Jurisdiction, OpportunityCategory, OpportunityStatus } from '~/types/opportunity'
@@ -84,14 +85,14 @@ const opportunitiesWithStatus = computed(() => opportunities.map(opportunity => 
 })))
 
 const filtered = computed(() => {
-  return opportunitiesWithStatus.value.filter((item) => {
+  return sortOpportunitiesByDeadline(opportunitiesWithStatus.value.filter((item) => {
     return matchesOpportunitySearch(item, search.value)
       && matchesOpportunityAuthority(item, selectedAuthorities.value)
       && (!selectedJurisdictions.value.length || selectedJurisdictions.value.includes(item.jurisdiction))
       && (!selectedCategories.value.length || item.category.some(category => selectedCategories.value.includes(category)))
       && (!selectedStatuses.value.length || selectedStatuses.value.includes(item.status))
       && matchesOpportunityAccess(item, selectedAccess.value)
-  })
+  }))
 })
 
 const pageCount = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))

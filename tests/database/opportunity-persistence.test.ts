@@ -14,13 +14,14 @@ import {
 import { createOpportunityRepository } from '../../server/utils/opportunity-repository'
 import { serializeOpportunity } from '../../server/services/opportunities'
 import { toOpportunity } from '../../shared/utils/opportunity'
+import { toStoredOpportunityDeadline } from '../../shared/utils/opportunity-deadline'
 
 const databaseUrl = process.env.TEST_DATABASE_URL
 if (!databaseUrl) throw new Error('Run npm run test:database and select an environment file.')
 
 // Only the new, randomly named databases receive migrations or test writes.
 // The selected database supplies the server connection and is never reset.
-describe.each(['fresh', 'upgrade'] as const)('%s PostgreSQL migration', scenario => {
+describe.each(['fresh', 'upgrade', 'upgrade-from-scraper'] as const)('%s PostgreSQL migration', scenario => {
   const databaseName = `echo_schema_test_${randomUUID().replaceAll('-', '')}`
   let admin: ReturnType<typeof postgres>
   let connection: ReturnType<typeof connectDatabase>
@@ -57,11 +58,11 @@ describe.each(['fresh', 'upgrade'] as const)('%s PostgreSQL migration', scenario
     url.pathname = `/${databaseName}`
     connection = connectDatabase(url.toString())
 
-    if (scenario === 'upgrade') {
+    if (scenario !== 'fresh') {
       previousMigrations = await mkdtemp(join(tmpdir(), 'echo-migrations-'))
       await mkdir(join(previousMigrations, 'meta'))
       const journal = JSON.parse(await readFile('drizzle/meta/_journal.json', 'utf8'))
-      journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= 2)
+      journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= (scenario === 'upgrade' ? 2 : 3))
       await writeFile(join(previousMigrations, 'meta/_journal.json'), JSON.stringify(journal))
       for (const entry of journal.entries) {
         await copyFile(`drizzle/${entry.tag}.sql`, join(previousMigrations, `${entry.tag}.sql`))
@@ -70,6 +71,15 @@ describe.each(['fresh', 'upgrade'] as const)('%s PostgreSQL migration', scenario
       const [user] = await connection.db.insert(users).values({ username: 'existing-admin', passwordHash: 'test-hash', role: 'admin' }).returning()
       await connection.db.insert(staticPages).values({ slug: 'about', contentHtml: '<h1>Existing page</h1>', updatedBy: user!.id })
       await connection.db.insert(websiteIndexes).values({ name: 'Existing index', indexUrl: 'https://example.gov.au/' })
+      if (scenario === 'upgrade-from-scraper') {
+        await connection.client`INSERT INTO websites (id, tags) VALUES ('legacy-platform', '{}')`
+        // Raw SQL intentionally omits the new column: this database is still at 0003.
+        await connection.client`INSERT INTO opportunities
+          (id, title, full_text, source_url, website_id, source_org, jurisdiction, submission_deadline, category)
+          VALUES ('existing-opportunity', 'Existing consultation', ARRAY['Existing paragraph.'],
+            'https://example.gov.au/existing-consultation', 'legacy-platform', 'Existing authority',
+            'Victoria', '2026-11-20T17:23:45.123Z', ARRAY['Climate change'])`
+      }
     }
 
     await migrate(connection.db, { migrationsFolder: './drizzle' })
@@ -91,13 +101,19 @@ describe.each(['fresh', 'upgrade'] as const)('%s PostgreSQL migration', scenario
     expect(tables.map(row => row.table_name)).toEqual([
       'article_history', 'opportunities', 'static_pages', 'users', 'website_indexes', 'websites'
     ])
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(4)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(5)
     await migrate(connection.db, { migrationsFolder: './drizzle' })
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(4)
-    if (scenario === 'upgrade') {
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(5)
+    if (scenario !== 'fresh') {
       expect((await connection.db.select().from(users))[0]?.username).toBe('existing-admin')
       expect((await connection.db.select().from(staticPages))[0]?.contentHtml).toBe('<h1>Existing page</h1>')
       expect((await connection.db.select().from(websiteIndexes))[0]?.name).toBe('Existing index')
+      if (scenario === 'upgrade-from-scraper') {
+        const [existing] = await connection.db.select().from(opportunities).where(eq(opportunities.id, 'existing-opportunity'))
+        expect(existing?.submissionDeadline.toISOString()).toBe('2026-11-20T17:23:45.123Z')
+        expect(existing?.submissionDeadlinePrecision).toBe('datetime')
+        expect(serializeOpportunity(existing!).submissionDeadline).toBe('2026-11-20T17:23:45.123Z')
+      }
     }
   })
 
@@ -112,8 +128,54 @@ describe.each(['fresh', 'upgrade'] as const)('%s PostgreSQL migration', scenario
     expect(response.website).toBe('test-platform')
     expect(response.startDate).toBeNull()
     expect(response.tags).toBeNull()
+    expect(stored?.submissionDeadlinePrecision).toBe('datetime')
     expect(response.submissionDeadline).toBe('2026-11-20T00:00:00.000Z')
     expect(toOpportunity(response).summary).toBe('First paragraph.')
+  })
+
+  it('round-trips month-only deadlines and changes precision in both directions', async () => {
+    const row = await insert({ ...toStoredOpportunityDeadline('2026-11'), startDate: new Date('2026-09-21T00:00:00Z') })
+    expect(row.submissionDeadline.toISOString()).toBe('2026-11-01T00:00:00.000Z')
+    expect(row.submissionDeadlinePrecision).toBe('month')
+    expect(toOpportunity(serializeOpportunity(row)).submissionDeadline).toBe('2026-11')
+    const [exact] = await connection.db.update(opportunities).set(toStoredOpportunityDeadline('2026-11-06T17:00:00Z'))
+      .where(eq(opportunities.id, row.id)).returning()
+    expect(serializeOpportunity(exact!).submissionDeadline).toBe('2026-11-06T17:00:00.000Z')
+    const [month] = await connection.db.update(opportunities).set(toStoredOpportunityDeadline('2026-12'))
+      .where(eq(opportunities.id, row.id)).returning()
+    expect(serializeOpportunity(month!).submissionDeadline).toBe('2026-12')
+  })
+
+  it.each([
+    ['unknown precision', { submissionDeadlinePrecision: 'day' }],
+    ['non-first day', { submissionDeadlinePrecision: 'month', submissionDeadline: new Date('2026-11-02T00:00:00Z') }],
+    ['non-midnight time', { submissionDeadlinePrecision: 'month', submissionDeadline: new Date('2026-11-01T00:00:00.001Z') }],
+    ['local midnight instead of UTC', { submissionDeadlinePrecision: 'month', submissionDeadline: new Date('2026-11-01T00:00:00+11:00') }],
+    ['opening after month start', { ...toStoredOpportunityDeadline('2026-11'), startDate: new Date('2026-11-01T00:00:00.001Z') }]
+  ])('rejects invalid deadline storage: %s', async (_name, overrides) => {
+    await rejectsConstraint(connection.db.insert(opportunities).values(values(overrides as Partial<NewOpportunity>)))
+  })
+
+  it.each(['0001-01-01 00:00:00+00 BC', '10000-01-01 00:00:00+00'])('rejects out-of-range month years (%s)', async timestamp => {
+    const row = await insert(toStoredOpportunityDeadline('2026-11'))
+    // PostgreSQL literals avoid JS ISO extended-year syntax being rejected by the driver first.
+    await expect(connection.client`UPDATE opportunities SET submission_deadline = ${timestamp}::timestamptz WHERE id = ${row.id}`)
+      .rejects.toMatchObject({ code: '23514' })
+  })
+
+  it('checks month normalization in UTC even when the database session uses Sydney time', async () => {
+    const row = await insert(toStoredOpportunityDeadline('2026-11'))
+    await connection.client.begin(async transaction => {
+      await transaction`SET LOCAL TIME ZONE 'Australia/Sydney'`
+      const [updated] = await transaction`UPDATE opportunities SET submission_deadline = '2026-12-01 00:00:00+00' WHERE id = ${row.id} RETURNING submission_deadline = '2026-12-01T00:00:00Z'::timestamptz AS normalized`
+      expect(updated?.normalized).toBe(true)
+    })
+  })
+
+  it('permits an opening exactly at the month deadline and enforces normalization on updates', async () => {
+    const row = await insert({ ...toStoredOpportunityDeadline('2026-11'), startDate: new Date('2026-11-01T00:00:00Z') })
+    await rejectsConstraint(connection.db.update(opportunities).set({ submissionDeadline: new Date('2026-11-02T00:00:00Z') })
+      .where(eq(opportunities.id, row.id)))
   })
 
   it('enforces canonical URL uniqueness and keeps the original ID during an upsert', async () => {

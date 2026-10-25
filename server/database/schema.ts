@@ -12,7 +12,7 @@ import {
   timestamp,
   varchar
 } from 'drizzle-orm/pg-core'
-import type { Jurisdiction, OpportunityCategory, OpportunityLocation } from '../../shared/types/opportunity'
+import type { DeadlinePrecision, Jurisdiction, OpportunityCategory, OpportunityLocation } from '../../shared/types/opportunity'
 
 export const userRole = pgEnum('user_role', ['user', 'admin'])
 
@@ -58,6 +58,7 @@ export const opportunities = pgTable('opportunities', {
   jurisdiction: text('jurisdiction').$type<Jurisdiction>().notNull(),
   startDate: timestamp('start_date', { withTimezone: true }),
   submissionDeadline: timestamp('submission_deadline', { withTimezone: true }).notNull(),
+  submissionDeadlinePrecision: text('submission_deadline_precision').$type<DeadlinePrecision>().notNull().default('datetime'),
   category: text('category').array().$type<OpportunityCategory[]>().notNull(),
   tags: text('tags').array(),
   summary: text('summary'),
@@ -70,6 +71,11 @@ export const opportunities = pgTable('opportunities', {
   check('opportunities_source_org_nonempty', sql`${table.sourceOrg} ~ '[^[:space:]]'`),
   check('opportunities_jurisdiction_valid', sql`${table.jurisdiction} IN ('Commonwealth', 'Victoria')`),
   check('opportunities_deadline_finite', sql`isfinite(${table.submissionDeadline})`),
+  check('opportunities_deadline_precision_valid', sql`${table.submissionDeadlinePrecision} IN ('datetime', 'month')`),
+  check('opportunities_deadline_month_normalized', sql`${table.submissionDeadlinePrecision} <> 'month' OR (
+    ${table.submissionDeadline} AT TIME ZONE 'UTC' = date_trunc('month', ${table.submissionDeadline} AT TIME ZONE 'UTC')
+    AND EXTRACT(YEAR FROM ${table.submissionDeadline} AT TIME ZONE 'UTC') BETWEEN 1 AND 9999
+  )`),
   check('opportunities_category_valid', sql`public.opportunity_text_array_valid(${table.category}, TRUE)
     AND ${table.category} <@ ARRAY[
       'Biodiversity & ecosystems', 'Climate change', 'First Nations & cultural heritage',

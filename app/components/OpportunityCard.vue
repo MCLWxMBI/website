@@ -1,15 +1,11 @@
 <script setup lang="ts">
+import { formatOpportunityDate } from '~~/shared/utils/opportunity-deadline'
 import type { OpportunityWithStatus } from '~/types/opportunity'
 import { getOpportunityTagGroups } from '~/utils/opportunity-access'
 
 const props = defineProps<{ opportunity: OpportunityWithStatus; returnQuery?: Record<string, string | string[]> }>()
 const tagGroups = computed(() => getOpportunityTagGroups(props.opportunity, 2))
-const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC'
-}).format(new Date(date))
+const formatDate = (date: string) => formatOpportunityDate(date, 'short')
 </script>
 
 <template>

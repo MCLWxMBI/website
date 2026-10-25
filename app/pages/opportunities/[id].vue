@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatOpportunityDate } from '~~/shared/utils/opportunity-deadline'
 import { opportunities } from '~/data/opportunities'
 import { getWebsiteDetails } from '~/data/website-details'
 import { getOpportunityTagGroups } from '~/utils/opportunity-access'
@@ -14,12 +15,7 @@ const tagGroups = getOpportunityTagGroups(opportunity)
 
 useSeoMeta({ title: opportunity.title, description: opportunity.summary })
 
-const formatDate = (date: string) => new Intl.DateTimeFormat('en-AU', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC'
-}).format(new Date(date))
+const formatDate = (date: string) => formatOpportunityDate(date, 'long')
 const returnQuery = computed(() => getOpportunityReturnQuery(route.query))
 </script>
 

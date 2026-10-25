@@ -93,7 +93,10 @@ choices. Non-default access choices use `access=public`,
 `access=invite-only`, or `access=none` in the URL. Status is derived from the
 server-synchronised UTC time: an opportunity is closed at or after its
 submission deadline, upcoming before a supplied start time, and open otherwise.
-A missing start time defaults to open until the deadline. Search and filter state is encoded
+A missing start time defaults to open until the deadline. Month-only deadlines
+close at midnight UTC on the first day of the month and display without a day.
+Filtered results sort by effective deadline ascending before pagination, with
+opportunity ID ascending to break ties. Search and filter state is encoded
 in URL query parameters so views can be shared and restored. Empty results must
 explain what happened and provide a clear reset action.
 

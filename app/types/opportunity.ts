@@ -1,6 +1,8 @@
 export { jurisdictions, opportunityCategories, opportunityStatuses } from '~~/shared/types/opportunity'
 export type {
+  DeadlinePrecision,
   GeoPosition,
+  OpportunityDeadline,
   Jurisdiction,
   MultiPolygonGeometry,
   Opportunity,

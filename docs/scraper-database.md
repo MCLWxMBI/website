@@ -11,6 +11,10 @@ website features, validation functions, and deletion triggers. Existing users,
 static pages, and website-index records are preserved. The public catalogue and
 administration UI do not yet read or edit opportunities in PostgreSQL.
 
+Migration `0004_deadline-precision` adds month-only deadlines without changing
+existing timestamps. Existing rows and inserts that omit precision default to
+`datetime`. Apply migrations before updating the scraper to write month precision.
+
 ## Website identity
 
 Every opportunity writer must provide `website_id`, a stable text key referencing
@@ -43,10 +47,69 @@ assuming it is one of the two prototype websites.
   are trimmed, nonblank, and unique ignoring case. `full_text` contains an ordered,
   nonempty array of trimmed plain-text paragraphs; repeated paragraphs are valid.
 - Store finite timestamps and ensure a supplied opening time does not exceed the
-  deadline. Status is derived, never stored.
+  effective deadline. For month precision this means the first day at midnight
+  UTC, even if the publisher did not give a specific day. Status is derived, never
+  stored.
 - Validate full HTTPS URL syntax, plain text, canonical `Invite-only` spelling,
   summary length (at most 35 words), and GeoJSON coordinate bounds and ring closure
   in every application writer. Database geometry checks cover only basic shape.
+
+### Deadline mapping
+
+Extract either an exact UTC timestamp ending in `Z`, or `YYYY-MM` when only a
+month and year are known. Month values require years `0001`–`9999` and months
+`01`–`12`. Normalize publisher-local exact times to UTC before writing.
+
+| Extracted value | `submission_deadline` | `submission_deadline_precision` |
+| --- | --- | --- |
+| `2026-11` | `2026-11-01T00:00:00Z` | `month` |
+| `2026-11-06T17:00:00Z` | `2026-11-06T17:00:00Z` | `datetime` |
+
+The month timestamp is used for sorting and closing status; the precision flag
+preserves the month-only display. A month-only November deadline becomes closed
+at the start of November. Do not pass a bare `YYYY-MM` directly into PostgreSQL's
+timestamp column, or infer month precision from an exact timestamp on day one.
+
+Write both deadline fields together on inserts and whenever updating a deadline,
+including in `ON CONFLICT (source_url) DO UPDATE`. Reset precision to `datetime`
+when an exact date replaces a month-only value. The database rejects unknown
+precision values and month timestamps that are not midnight UTC on the first day.
+The existing opening-time constraint applies to the normalized deadline.
+
+TypeScript writers can use `toStoredOpportunityDeadline` from
+`shared/utils/opportunity-deadline.ts` to validate and obtain both database
+fields. The serializer converts month rows back to `YYYY-MM`. Other scraper
+implementations must perform the same mapping; this repository does not contain
+the external scraper.
+
+For example, within the history-locking transaction below, with website metadata
+already present (use bound parameters for scraped values):
+
+~~~sql
+INSERT INTO public.opportunities (
+  id, title, full_text, source_url, website_id, source_org, jurisdiction,
+  submission_deadline, submission_deadline_precision, category
+) VALUES (
+  'water-plan', 'Water plan consultation', ARRAY['Feedback on the water plan.'],
+  'https://example.gov.au/consultations/water-plan', 'engage-victoria',
+  'Publishing authority', 'Victoria',
+  '2026-11-01T00:00:00Z', 'month', ARRAY['Water & resources']
+)
+ON CONFLICT (source_url) DO UPDATE SET
+  title = EXCLUDED.title,
+  full_text = EXCLUDED.full_text,
+  website_id = EXCLUDED.website_id,
+  source_org = EXCLUDED.source_org,
+  jurisdiction = EXCLUDED.jurisdiction,
+  submission_deadline = EXCLUDED.submission_deadline,
+  submission_deadline_precision = EXCLUDED.submission_deadline_precision,
+  category = EXCLUDED.category;
+~~~
+
+This minimal example omits opening time and optional fields; writers supplying
+those fields must include them in both the insert and conflict update.
+
+### Transaction lifecycle
 
 For scraper writes, the caller owns the transaction:
 

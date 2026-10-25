@@ -13,6 +13,7 @@ const row: OpportunityRecord = {
   jurisdiction: 'Victoria',
   startDate: null,
   submissionDeadline: new Date('2026-10-23T17:00:00+11:00'),
+  submissionDeadlinePrecision: 'datetime',
   category: ['Climate change'],
   tags: null,
   summary: null,
@@ -30,6 +31,14 @@ describe('opportunity persistence boundary', () => {
     })
     expect(response).not.toHaveProperty('status')
     expect(response).not.toHaveProperty('websiteId')
+  })
+
+  it('serializes a month-only deadline without exposing the storage precision field', () => {
+    const response = serializeOpportunity({
+      ...row, submissionDeadline: new Date('2026-11-01T00:00:00Z'), submissionDeadlinePrecision: 'month'
+    })
+    expect(response.submissionDeadline).toBe('2026-11')
+    expect(response).not.toHaveProperty('submissionDeadlinePrecision')
   })
 
   it('serializes opening times, summaries, tags and geographic data when supplied', () => {

@@ -143,7 +143,7 @@ interface OpportunityResponse {
   sourceOrg: string
   jurisdiction: 'Commonwealth' | 'Victoria'
   startDate: string | null
-  submissionDeadline: string
+  submissionDeadline: string // UTC timestamp ending in Z, or YYYY-MM
   category: OpportunityCategory[]
   tags: string[] | null
 
@@ -166,8 +166,8 @@ interface OpportunityResponse {
 | **website** | Stable source-platform key referencing `websites.id`, stored as `opportunities.website_id`. Used to retrieve website-feature tags; separate from the publishing organisation and opportunity tags. |
 | **sourceOrg** | Non-empty name of the publishing organisation running the consultation. Used as the Authority filter value; source websites are separate. The frontend derives unique, alphabetically sorted options from the complete opportunity collection and matches exact names. |
 | **jurisdiction** | One of the supported jurisdiction values. Do not return an unrecognised free-text value. |
-| **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than `submissionDeadline`. |
-| **submissionDeadline** | ISO 8601 UTC timestamp ending in `Z`. This is the authoritative instant at which the opportunity closes. |
+| **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than the effective `submissionDeadline` instant (the first day at midnight UTC for month-only deadlines). |
+| **submissionDeadline** | An ISO 8601 UTC timestamp ending in `Z`, or a canonical `YYYY-MM` month-only value. Month-only values require years `0001`–`9999` and months `01`–`12`; their effective closing instant is the first day of that month at midnight UTC. |
 | **category** | Array containing at least one supported category, without duplicates. |
 | **tags** | Flexible display labels, or `null` when the opportunity has none. Values must be trimmed, non-empty, non-null, and unique using case-insensitive comparison. |
 
@@ -202,7 +202,13 @@ Status rules, evaluated in this order, are:
 3. Otherwise: open, including when `startDate` is `null`.
 
 Equality at `startDate` means open; equality at `submissionDeadline` means
-closed. Comparisons use the UTC instants represented by the timestamps.
+closed. Comparisons use UTC instants. For a month-only deadline such as `2026-11`,
+closing occurs at `2026-11-01T00:00:00Z`, not at the end of November.
+
+The catalogue sorts filtered results by effective deadline ascending before
+pagination, across all statuses, with opportunity ID ascending as the tie-breaker.
+Month-only values display as “Nov 2026” on cards and “November 2026” on detail
+pages; exact deadlines and opening dates retain their full-date display.
 
 ## Server time
 
@@ -246,7 +252,11 @@ unique using case-insensitive comparison. Referenced websites cannot be deleted.
 points; its IDs are not website-feature keys.
 
 Persistence uses snake_case columns, while the response uses camelCase, including
-`website_id` → `website`. Timestamps are serialized in UTC ending in `Z`.
+`website_id` → `website`. Exact timestamps are serialized in UTC ending in `Z`.
+Migration `0004_deadline-precision` adds `submission_deadline_precision`, which is
+`datetime` by default, preserving existing rows. A `month` row stores the first
+day at midnight UTC in `submission_deadline`, but serializes as `YYYY-MM`; the
+precision column is not exposed in the public response.
 SQL null tags/start dates remain JSON null; null summary/location fields are
 omitted. `serializeOpportunity` provides this mapping and `toOpportunity`
 constructs the frontend model with the summary fallback. These helpers are

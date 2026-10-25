@@ -35,6 +35,11 @@ export interface OpportunityLocation {
   geometry: PointGeometry | PolygonGeometry | MultiPolygonGeometry
 }
 
+export type DeadlinePrecision = 'datetime' | 'month'
+
+// UTC timestamp ending in Z, or YYYY-MM for a month-only deadline.
+export type OpportunityDeadline = string
+
 export interface OpportunityResponse {
   id: string
   title: string
@@ -45,7 +50,7 @@ export interface OpportunityResponse {
   sourceOrg: string
   jurisdiction: Jurisdiction
   startDate: string | null
-  submissionDeadline: string
+  submissionDeadline: OpportunityDeadline
   category: OpportunityCategory[]
   tags: string[] | null
   location?: OpportunityLocation
