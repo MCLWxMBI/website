@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseQuery, stringifyQuery } from 'vue-router'
-import { opportunities } from '../../app/data/opportunities'
+import { makeOpportunity } from '../support/opportunity'
 import {
   getOpportunityAuthorities,
   getOpportunityReturnQuery,
@@ -12,6 +12,11 @@ import {
 
 const department = 'Department of Climate Change, Energy, the Environment and Water'
 const authorities = ['Sustainability Victoria', department]
+const opportunities = [
+  makeOpportunity({ sourceOrg: department }),
+  makeOpportunity({ id: 'second', sourceOrg: 'Sustainability Victoria' }),
+  makeOpportunity({ id: 'third', sourceOrg: 'Another authority' })
+]
 
 describe('opportunity authority filter', () => {
   it('derives unique options in alphabetical order from the complete collection', () => {

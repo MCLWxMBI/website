@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { opportunities } from '../../app/data/opportunities'
+import { makeOpportunity } from '../support/opportunity'
 import { getOpportunityStatus } from '../../app/utils/opportunity-status'
 import {
   formatOpportunityDate,
@@ -42,7 +42,7 @@ describe('deadline formats and persistence mapping', () => {
   })
 
   it('validates deadlines at the frontend response boundary', () => {
-    const response: OpportunityResponse = { ...opportunities[0]!, submissionDeadline: '2026-13' }
+    const response: OpportunityResponse = makeOpportunity({ submissionDeadline: '2026-13' })
     expect(() => toOpportunity(response)).toThrow('Deadline must be')
   })
 })
@@ -96,15 +96,4 @@ describe('chronological catalogue order', () => {
     expect(input.map(item => item.id)).toEqual(['last', 'b', 'first', 'a'])
   })
 
-  it('keeps both mock formats, with the November-only example before November 6', () => {
-    const monthOnly = opportunities.find(item => item.id === 'nature-repair-methods')!
-    const exact = opportunities.find(item => item.id === 'cultural-landscape-guidelines')!
-    expect(monthOnly.submissionDeadline).toBe('2026-11')
-    expect(monthOnly.startDate).toBe('2026-09-21T00:00:00Z')
-    expect(exact.submissionDeadline).toBe('2026-11-06T23:59:59Z')
-    expect(sortOpportunitiesByDeadline([exact, monthOnly])).toEqual([monthOnly, exact])
-    for (const opportunity of opportunities) {
-      expect(() => parseOpportunityDeadline(opportunity.submissionDeadline)).not.toThrow()
-    }
-  })
 })

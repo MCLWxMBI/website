@@ -56,6 +56,13 @@ export interface OpportunityResponse {
   location?: OpportunityLocation
 }
 
+export type OpportunitiesResponse = OpportunityResponse[]
+
+export interface OpportunityDetailResponse {
+  opportunity: OpportunityResponse
+  websiteTags: string[]
+}
+
 export interface Opportunity extends OpportunityResponse {
   summary: string
 }
