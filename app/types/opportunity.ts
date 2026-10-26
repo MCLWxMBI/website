@@ -9,12 +9,10 @@ export type {
   OpportunityCategory,
   OpportunityLocation,
   OpportunityResponse,
+  OpportunitiesResponse,
+  OpportunityDetailResponse,
   OpportunityStatus,
   OpportunityWithStatus,
   PointGeometry,
   PolygonGeometry
 } from '~~/shared/types/opportunity'
-
-// Known prototype websites; persistence supports additional website IDs.
-export const websiteKeys = ['engage-victoria', 'dcceew-consult'] as const
-export type WebsiteKey = typeof websiteKeys[number]

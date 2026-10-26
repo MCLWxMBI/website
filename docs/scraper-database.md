@@ -9,7 +9,8 @@ database as an upgrade: `CREATE TABLE IF NOT EXISTS` does not reconcile tables.
 Migration `0003_shared-scraper-schema` adds opportunities, article history,
 website features, validation functions, and deletion triggers. Existing users,
 static pages, and website-index records are preserved. The public catalogue and
-administration UI do not yet read or edit opportunities in PostgreSQL.
+detail pages read opportunities and website features from PostgreSQL. Opportunity
+administration remains deferred.
 
 Migration `0004_deadline-precision` adds month-only deadlines without changing
 existing timestamps. Existing rows and inserts that omit precision default to
@@ -33,15 +34,16 @@ Website keys identify platforms, not publishing authorities or jurisdictions.
 `website_indexes` is a separate registry with numeric IDs for scraper entry
 points; do not copy those IDs into `website_id`. API responses expose the text
 key as `website`. The repository supports feature lookup by that key without
-assuming it is one of the two prototype websites.
+assuming it is one of the two development fixture websites.
 
 ## Opportunity identity and writes
 
 - Supply a stable, nonblank opportunity ID suitable for a detail-page URL. Never
   generate a new ID when display content changes.
 - Store the canonical HTTPS consultation URL in `source_url`. It is unique:
-  one URL identifies one opportunity. Website homepages shared by prototype
-  records are not production consultation identities.
+  one URL identifies one opportunity. Development seed records use unique
+  placeholder paths beneath their referenced indexes; real scraper records must
+  use actual canonical consultation URLs.
 - Populate `category text[]` with at least one supported category, and store
   `tags text[]` as null when there are no flexible opportunity tags. Label arrays
   are trimmed, nonblank, and unique ignoring case. `full_text` contains an ordered,
@@ -159,3 +161,20 @@ databases. Tests create and drop only their own randomly named databases, coveri
 fresh migration, upgrade from `0002`, constraints, website lookup, URL upserts,
 hash retention, deletion suppression, and rollback. Unit tests cover serialization
 and summary fallback without a database. No prototype data is seeded by migration.
+
+## Development fixtures
+
+Run `npm run db:seed` after migrating the devcontainer. This command is fixed to
+`postgres:5432/echo`; it ignores `DATABASE_URL` and all environment files. Runtime
+API reads still use `DATABASE_URL`, including in production.
+
+`scripts/seed.sql` contains the complete synthetic opportunity collection and
+website features. It creates matching `article_history` rows linked by the same
+unique placeholder URL, with a lowercase SHA-256 hash of each normalized seed
+row's JSONB representation (timestamps normalized to UTC). These are synthetic
+fixtures, not claims that a network scrape occurred.
+
+The seed follows history-first locking, preserves existing IDs on URL conflicts,
+and skips deletion markers without clearing them. Unrelated rows remain intact.
+It runs as one transaction and does not insert users, static pages, or the
+separate website-index registry.

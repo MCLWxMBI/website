@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { sortOpportunitiesByDeadline } from '~~/shared/utils/opportunity-deadline'
-import { opportunities } from '~/data/opportunities'
+import { toOpportunity } from '~~/shared/utils/opportunity'
+import type { OpportunitiesResponse } from '~~/shared/types/opportunity'
 import { jurisdictions, opportunityCategories, opportunityStatuses } from '~/types/opportunity'
 import type { Jurisdiction, OpportunityCategory, OpportunityStatus } from '~/types/opportunity'
 import {
@@ -15,6 +16,10 @@ import type { OpportunityAccess } from '~/utils/opportunity-access'
 
 useSeoMeta({ title: 'Consultation opportunities' })
 
+const { data, error, status: requestStatus, refresh } = await useFetch<OpportunitiesResponse>('/api/opportunities', {
+  default: () => []
+})
+const opportunities = computed(() => (data.value ?? []).map(toOpportunity))
 const { currentTime } = await useServerTime()
 
 const route = useRoute()
@@ -26,8 +31,8 @@ const value = (key: string) => typeof route.query[key] === 'string' ? route.quer
 const validList = <T extends string>(raw: string, valid: readonly T[]) =>
   raw.split(',').filter((item): item is T => valid.includes(item as T))
 
-const authorities = getOpportunityAuthorities(opportunities)
-const selectedAuthorities = ref(parseOpportunityAuthorities(route.query.authority, authorities))
+const authorities = computed(() => getOpportunityAuthorities(opportunities.value))
+const selectedAuthorities = ref(parseOpportunityAuthorities(route.query.authority, authorities.value))
 const search = ref(value('q'))
 const selectedJurisdictions = ref<Jurisdiction[]>(validList(value('location'), jurisdictions))
 const selectedCategories = ref<OpportunityCategory[]>(validList(value('category'), opportunityCategories))
@@ -79,7 +84,7 @@ const clearEverything = () => {
   clearFilters()
 }
 
-const opportunitiesWithStatus = computed(() => opportunities.map(opportunity => ({
+const opportunitiesWithStatus = computed(() => opportunities.value.map(opportunity => ({
   ...opportunity,
   status: getOpportunityStatus(opportunity, currentTime.value)
 })))
@@ -115,17 +120,18 @@ const goToPage = (nextPage: number) => {
 watch(search, () => {
   if (search.value !== value('q')) resetPageAndSync()
 })
-watch(() => route.query, () => {
+watch([() => route.query, authorities], () => {
   search.value = value('q')
-  selectedAuthorities.value = parseOpportunityAuthorities(route.query.authority, authorities)
+  selectedAuthorities.value = parseOpportunityAuthorities(route.query.authority, authorities.value)
   selectedJurisdictions.value = validList(value('location'), jurisdictions)
   selectedCategories.value = validList(value('category'), opportunityCategories)
   selectedStatuses.value = validList(value('status'), opportunityStatuses)
   selectedAccess.value = parseOpportunityAccess(value('access'))
-  page.value = Math.min(Math.max(1, Number(value('page')) || 1), pageCount.value)
+  const requestedPage = Math.max(1, Number(value('page')) || 1)
+  page.value = requestStatus.value === 'success' ? Math.min(requestedPage, pageCount.value) : requestedPage
 })
 watch(pageCount, (count) => {
-  if (page.value > count) {
+  if (requestStatus.value === 'success' && page.value > count) {
     page.value = count
     syncUrl()
   }
@@ -145,7 +151,7 @@ watch(pageCount, (count) => {
           <input v-model="search" type="search" placeholder="Search by topic, organisation or keyword">
         </label>
         <div class="hero-meta">
-          <span><i class="live-dot"></i> {{ openOpportunityCount }} opportunities open now</span>
+          <span v-if="requestStatus === 'success'"><i class="live-dot"></i> {{ openOpportunityCount }} opportunities open now</span>
           <span>Victoria & Commonwealth</span>
         </div>
       </div>
@@ -162,7 +168,9 @@ watch(pageCount, (count) => {
         <div class="listing-toolbar">
           <div>
             <p class="section-kicker">Browse opportunities</p>
-            <h2>{{ filtered.length }} {{ filtered.length === 1 ? 'result' : 'results' }}</h2>
+            <h2 v-if="requestStatus === 'pending'">Loading opportunities…</h2>
+            <h2 v-else-if="error">Opportunities unavailable</h2>
+            <h2 v-else>{{ filtered.length }} {{ filtered.length === 1 ? 'result' : 'results' }}</h2>
           </div>
           <button class="filter-trigger" type="button" @click="mobileFiltersOpen = true">
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M5 10h10M8 15h4"/></svg>
@@ -189,7 +197,15 @@ watch(pageCount, (count) => {
           </aside>
 
           <div class="results-column">
-            <div v-if="visibleOpportunities.length" class="opportunity-grid">
+            <div v-if="requestStatus === 'pending'" class="empty-state" role="status" aria-live="polite">
+              <p>Loading opportunities…</p>
+            </div>
+            <div v-else-if="error" class="empty-state" role="alert">
+              <h2>Opportunities are temporarily unavailable</h2>
+              <p>Please try again shortly.</p>
+              <button class="button button-primary" type="button" @click="refresh()">Try again</button>
+            </div>
+            <div v-else-if="visibleOpportunities.length" class="opportunity-grid">
               <OpportunityCard v-for="item in visibleOpportunities" :key="item.id" :opportunity="item" :return-query="queryState" />
             </div>
             <div v-else class="empty-state">
@@ -199,7 +215,7 @@ watch(pageCount, (count) => {
               <button v-if="hasAnyFilter" class="button button-primary" type="button" @click="clearEverything">Clear search and filters</button>
             </div>
 
-            <nav v-if="filtered.length > pageSize" class="pagination" aria-label="Results pages">
+            <nav v-if="!error && requestStatus === 'success' && filtered.length > pageSize" class="pagination" aria-label="Results pages">
               <button type="button" :disabled="page === 1" aria-label="Previous page" @click="goToPage(page - 1)">←</button>
               <button v-for="number in pageCount" :key="number" type="button" :class="{ active: number === page }" :aria-current="number === page ? 'page' : undefined" @click="goToPage(number)">{{ number }}</button>
               <button type="button" :disabled="page === pageCount" aria-label="Next page" @click="goToPage(page + 1)">→</button>

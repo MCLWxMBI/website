@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { opportunities } from '../../app/data/opportunities'
+import { makeOpportunity } from '../support/opportunity'
+
+const opportunities = [
+  makeOpportunity({ id: 'invitation', tags: ['Invite-only'] }),
+  makeOpportunity({ id: 'public' })
+]
 import {
   defaultOpportunityAccess,
   getOpportunityAccess,
@@ -11,11 +16,7 @@ import {
   serializeOpportunityAccess
 } from '../../app/utils/opportunity-access'
 
-const inviteOnlyIds = [
-  'offshore-renewables-guidance',
-  'cultural-landscape-guidelines',
-  'critical-minerals-review'
-]
+const inviteOnlyIds = ['invitation']
 
 describe('opportunity categories and tags', () => {
   it('keeps controlled categories separate from valid flexible tags', () => {
@@ -35,7 +36,7 @@ describe('opportunity categories and tags', () => {
   })
 
   it('searches both categories and flexible tags', () => {
-    const opportunity = opportunities.find(item => item.id === 'offshore-renewables-guidance')!
+    const opportunity = opportunities.find(item => item.id === 'invitation')!
     expect(matchesOpportunitySearch(opportunity, 'climate change')).toBe(true)
     expect(matchesOpportunitySearch(opportunity, 'invite-only')).toBe(true)
     expect(matchesOpportunitySearch(opportunity, 'unrelated')).toBe(false)
@@ -43,7 +44,7 @@ describe('opportunity categories and tags', () => {
 
   it('provides separate category and flexible-tag groups for catalogue views', () => {
     const opportunity = {
-      ...opportunities.find(item => item.id === 'offshore-renewables-guidance')!,
+      ...opportunities.find(item => item.id === 'invitation')!,
       status: 'closed' as const
     }
     expect(getOpportunityTagGroups(opportunity, 1)).toEqual({
@@ -67,8 +68,8 @@ describe('opportunity access filter', () => {
   })
 
   it('classifies and filters public and invite-only records', () => {
-    const inviteOnly = opportunities.find(item => item.id === 'offshore-renewables-guidance')!
-    const publicOpportunity = opportunities.find(item => item.id === 'victorian-waterway-health')!
+    const inviteOnly = opportunities.find(item => item.id === 'invitation')!
+    const publicOpportunity = opportunities.find(item => item.id === 'public')!
 
     expect(getOpportunityAccess(inviteOnly)).toBe('invite-only')
     expect(getOpportunityAccess(publicOpportunity)).toBe('public')

@@ -71,8 +71,8 @@ the session password.
 
 ### Choose a database and run migrations
 
-Every database command displays an interactive list of project-root `.env` and
-`.env.*` files. It excludes `.env.example`. After you choose a file, the command
+Except for `db:seed`, database commands display an interactive list of project-root
+`.env` and `.env.*` files, excluding `.env.example`. After you choose a file, the command
 prints its name and the database URL it will use, with the password replaced by
 `***`, before connecting.
 
@@ -100,11 +100,38 @@ Keep existing migration SQL and snapshots unchanged. Opportunity validation
 functions and deletion triggers are maintained explicitly in new migration SQL;
 review their ordering as well as the generated tables and constraints.
 
-The public opportunity catalogue still uses prototype data. The persistence
-schema and mapping helpers are ready for future API integration. Scraper writers
-must supply a unique canonical source URL and a `website_id` referencing
-`websites.id`. See [Scraper database integration](docs/scraper-database.md) for
-the writer protocol, validation responsibilities, and deletion behavior.
+### Seed the development catalogue
+
+After migrating the devcontainer database (select `.env` above), run:
+
+```bash
+npm run db:seed
+npm run dev
+```
+
+The seed command always connects to `postgres:5432/echo` using the devcontainer's
+fixed development credentials. It does not load environment files, show an
+environment picker, or use `DATABASE_URL`. Run it inside the devcontainer; it
+requires the existing migrations and never runs automatically on application
+startup. Its fixtures live in `scripts/seed.sql`; the root `seed.sql` remains the
+separate website-index registry seed.
+
+Seeding writes 12 synthetic opportunities, two website-feature records, and
+matching scrape histories. Placeholder consultation URLs are unique beneath
+the Engage Victoria and DCCEEW indexes. Reruns update matching fixtures, preserve
+unrelated records and stable IDs, and skip URLs marked deleted. The entire seed
+rolls back if a conflicting ID belongs to another source URL.
+
+The public catalogue and detail pages read PostgreSQL through
+`GET /api/opportunities` and `GET /api/opportunities/:id`, including website
+features. Application reads use `DATABASE_URL` in development and production;
+there is no mock-data fallback when the database is unavailable. Restart the
+application after changing its database environment. No new migration is needed
+for these reads.
+
+Scraper writers must supply a unique canonical source URL and a `website_id`
+referencing `websites.id`. See [Scraper database integration](docs/scraper-database.md)
+for the writer protocol, validation responsibilities, and deletion behavior.
 
 ### Create an administrator
 

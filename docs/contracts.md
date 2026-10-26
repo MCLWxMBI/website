@@ -1,7 +1,7 @@
 # ECHO API response contract
 
 This document defines the opportunity data the ECHO frontend expects from a
-future API. **MUST** identifies data the frontend cannot reliably derive.
+server API. **MUST** identifies data the frontend cannot reliably derive.
 **SHOULD** identifies data the API should provide, but for which the frontend
 has a deterministic fallback.
 
@@ -132,6 +132,26 @@ and CSRF protection. Notes never enter the public response.
 
 ## Opportunity
 
+`GET /api/opportunities` returns `OpportunityResponse[]`, ordered by effective
+deadline ascending and ID ascending. It returns the complete collection; the
+frontend applies search, filters and pagination. An empty database returns `[]`.
+
+`GET /api/opportunities/:id` returns:
+
+~~~ts
+interface OpportunityDetailResponse {
+  opportunity: OpportunityResponse
+  websiteTags: string[]
+}
+~~~
+
+Website features come from the referenced `websites` row, not a fixed platform
+list. A missing opportunity returns 404; missing database configuration, storage
+failures, or serialization failures return a generic 503. Both endpoints send
+`Cache-Control: no-store`. Article history and database credentials are never
+included in public responses. Both pages use SSR-compatible data fetching and
+never fall back to hardcoded opportunity records.
+
 ~~~ts
 interface OpportunityResponse {
   // Required
@@ -259,10 +279,11 @@ day at midnight UTC in `submission_deadline`, but serializes as `YYYY-MM`; the
 precision column is not exposed in the public response.
 SQL null tags/start dates remain JSON null; null summary/location fields are
 omitted. `serializeOpportunity` provides this mapping and `toOpportunity`
-constructs the frontend model with the summary fallback. These helpers are
-prepared for the future API; the current public catalogue still uses prototype
-data. See [Scraper database integration](scraper-database.md) for writer and
-deletion requirements.
+constructs the frontend model with the summary fallback. These helpers are used
+by the public catalogue and detail API. Development fixtures are stored in
+`scripts/seed.sql` and are inserted only by the explicit devcontainer seed command.
+See [Scraper database integration](scraper-database.md) for writer and deletion
+requirements.
 
 The backend retrieves the tags for one website using the equivalent of:
 

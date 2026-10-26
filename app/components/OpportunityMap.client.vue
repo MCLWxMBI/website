@@ -9,6 +9,8 @@ const mapElement = ref<HTMLElement | null>(null)
 let map: LeafletMap | undefined
 
 onMounted(async () => {
+  // Nuxt's client-only wrapper renders the element after its mounted hook.
+  await nextTick()
   const element = mapElement.value
   if (!element) return
 
