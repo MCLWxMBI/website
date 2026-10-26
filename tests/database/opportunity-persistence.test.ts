@@ -21,7 +21,7 @@ if (!databaseUrl) throw new Error('Run npm run test:database and select an envir
 
 // Only the new, randomly named databases receive migrations or test writes.
 // The selected database supplies the server connection and is never reset.
-describe.each(['fresh', 'upgrade', 'upgrade-from-scraper'] as const)('%s PostgreSQL migration', scenario => {
+describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadline-precision'] as const)('%s PostgreSQL migration', scenario => {
   const databaseName = `echo_schema_test_${randomUUID().replaceAll('-', '')}`
   let admin: ReturnType<typeof postgres>
   let connection: ReturnType<typeof connectDatabase>
@@ -62,7 +62,7 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper'] as const)('%s Postgre
       previousMigrations = await mkdtemp(join(tmpdir(), 'echo-migrations-'))
       await mkdir(join(previousMigrations, 'meta'))
       const journal = JSON.parse(await readFile('drizzle/meta/_journal.json', 'utf8'))
-      journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= (scenario === 'upgrade' ? 2 : 3))
+      journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= (scenario === 'upgrade' ? 2 : scenario === 'upgrade-from-scraper' ? 3 : 4))
       await writeFile(join(previousMigrations, 'meta/_journal.json'), JSON.stringify(journal))
       for (const entry of journal.entries) {
         await copyFile(`drizzle/${entry.tag}.sql`, join(previousMigrations, `${entry.tag}.sql`))
@@ -71,14 +71,16 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper'] as const)('%s Postgre
       const [user] = await connection.db.insert(users).values({ username: 'existing-admin', passwordHash: 'test-hash', role: 'admin' }).returning()
       await connection.db.insert(staticPages).values({ slug: 'about', contentHtml: '<h1>Existing page</h1>', updatedBy: user!.id })
       await connection.db.insert(websiteIndexes).values({ name: 'Existing index', indexUrl: 'https://example.gov.au/' })
-      if (scenario === 'upgrade-from-scraper') {
+      if (scenario === 'upgrade-from-scraper' || scenario === 'upgrade-from-deadline-precision') {
         await connection.client`INSERT INTO websites (id, tags) VALUES ('legacy-platform', '{}')`
-        // Raw SQL intentionally omits the new column: this database is still at 0003.
+        // Raw SQL works with the pre-upgrade schema (0003 or 0004).
         await connection.client`INSERT INTO opportunities
           (id, title, full_text, source_url, website_id, source_org, jurisdiction, submission_deadline, category)
           VALUES ('existing-opportunity', 'Existing consultation', ARRAY['Existing paragraph.'],
             'https://example.gov.au/existing-consultation', 'legacy-platform', 'Existing authority',
             'Victoria', '2026-11-20T17:23:45.123Z', ARRAY['Climate change'])`
+        await connection.client`UPDATE article_history SET hash = repeat('a', 64) WHERE source_url = 'https://example.gov.au/existing-consultation'`
+        await connection.client`INSERT INTO article_history (source_url, title, hash, deleted) VALUES ('https://example.gov.au/legacy-deleted', 'Deleted article', repeat('b', 64), TRUE)`
       }
     }
 
@@ -101,18 +103,22 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper'] as const)('%s Postgre
     expect(tables.map(row => row.table_name)).toEqual([
       'article_history', 'opportunities', 'static_pages', 'users', 'website_indexes', 'websites'
     ])
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(5)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(6)
     await migrate(connection.db, { migrationsFolder: './drizzle' })
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(5)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(6)
     if (scenario !== 'fresh') {
       expect((await connection.db.select().from(users))[0]?.username).toBe('existing-admin')
       expect((await connection.db.select().from(staticPages))[0]?.contentHtml).toBe('<h1>Existing page</h1>')
       expect((await connection.db.select().from(websiteIndexes))[0]?.name).toBe('Existing index')
-      if (scenario === 'upgrade-from-scraper') {
+      if (scenario === 'upgrade-from-scraper' || scenario === 'upgrade-from-deadline-precision') {
         const [existing] = await connection.db.select().from(opportunities).where(eq(opportunities.id, 'existing-opportunity'))
         expect(existing?.submissionDeadline.toISOString()).toBe('2026-11-20T17:23:45.123Z')
         expect(existing?.submissionDeadlinePrecision).toBe('datetime')
         expect(serializeOpportunity(existing!).submissionDeadline).toBe('2026-11-20T17:23:45.123Z')
+        const legacy = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, 'https://example.gov.au/existing-consultation'))
+        expect(legacy[0]).toMatchObject({ uploadDate: null, hash: 'a'.repeat(64), deleted: false })
+        const deleted = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, 'https://example.gov.au/legacy-deleted'))
+        expect(deleted[0]).toMatchObject({ uploadDate: null, hash: 'b'.repeat(64), deleted: true })
       }
     }
   })
@@ -240,10 +246,11 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper'] as const)('%s Postgre
   it('retains the successful hash after deletion and blocks recreation until history is explicitly cleared', async () => {
     const row = await insert()
     const hash = 'a'.repeat(64)
+    const [before] = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, row.sourceUrl))
     await connection.db.update(articleHistory).set({ hash }).where(eq(articleHistory.sourceUrl, row.sourceUrl))
     await connection.db.delete(opportunities).where(eq(opportunities.id, row.id))
     const [history] = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, row.sourceUrl))
-    expect(history).toEqual({ sourceUrl: row.sourceUrl, title: row.title, hash, deleted: true })
+    expect(history).toEqual({ sourceUrl: row.sourceUrl, title: row.title, hash, deleted: true, uploadDate: before!.uploadDate })
     expect(await connection.db.select().from(opportunities).where(eq(opportunities.id, row.id))).toEqual([])
     await rejectsConstraint(connection.db.insert(opportunities).values(values({ sourceUrl: row.sourceUrl })))
     await connection.db.delete(articleHistory).where(eq(articleHistory.sourceUrl, row.sourceUrl))
@@ -275,6 +282,39 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper'] as const)('%s Postgre
     expect(await connection.db.select().from(opportunities).where(eq(opportunities.id, row.id))).toHaveLength(1)
     const [history] = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, row.sourceUrl))
     expect(history?.deleted).toBe(false)
+  })
+
+  it('defaults new upload dates to the UTC day even in a different session timezone', async () => {
+    await connection.client.begin(async transaction => {
+      await transaction`SET LOCAL TIME ZONE 'Pacific/Kiritimati'`
+      const [row] = await transaction`INSERT INTO article_history (source_url, title)
+        VALUES (${'https://example.gov.au/utc-date-' + randomUUID()}, 'Default UTC date')
+        RETURNING upload_date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date AS matches_utc`
+      expect(row?.matches_utc).toBe(true)
+    })
+  })
+
+  it('stores an explicit date without a time and preserves it when the scrape hash changes', async () => {
+    const url = 'https://example.gov.au/explicit-date-' + randomUUID()
+    const [row] = await connection.db.insert(articleHistory).values({
+      sourceUrl: url, title: 'Dated article', uploadDate: '2024-02-29'
+    }).returning()
+    expect(row?.uploadDate).toBe('2024-02-29')
+    const [updated] = await connection.db.update(articleHistory).set({ hash: 'c'.repeat(64) })
+      .where(eq(articleHistory.sourceUrl, url)).returning()
+    expect(updated?.uploadDate).toBe('2024-02-29')
+  })
+
+  it.each(['infinity', '-infinity'])('rejects a non-finite upload date (%s)', async date => {
+    await expect(connection.client`INSERT INTO article_history (source_url, title, upload_date)
+      VALUES (${'https://example.gov.au/infinite-date-' + randomUUID()}, 'Invalid date', ${date}::date)`)
+      .rejects.toMatchObject({ code: '23514' })
+  })
+
+  it.each(['2026-02-30', '2026-13-01'])('rejects an invalid calendar upload date (%s)', async date => {
+    await expect(connection.client`INSERT INTO article_history (source_url, title, upload_date)
+      VALUES (${'https://example.gov.au/invalid-date-' + randomUUID()}, 'Invalid date', ${date}::date)`)
+      .rejects.toMatchObject({ code: '22008' })
   })
 
   it('rejects malformed successful hashes', async () => {

@@ -2,8 +2,14 @@
 -- The runner owns the transaction; no users, pages, or website indexes are changed.
 SET LOCAL TIME ZONE 'UTC';
 
-CREATE TEMP TABLE opportunity_seed ON COMMIT DROP AS
-SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
+-- Upload dates are synthetic first-upload dates, separate from content hashes.
+CREATE TEMP TABLE opportunity_seed (
+  LIKE public.opportunities,
+  upload_date date NOT NULL
+) ON COMMIT DROP;
+
+INSERT INTO opportunity_seed
+SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
 [
   {
     "id": "victorian-biodiversity-strategy-2037",
@@ -24,7 +30,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
     ],
     "tags": null,
     "summary": "Help shape the next decade of action to protect and restore Victoria’s native plants, animals and ecosystems.",
-    "location": null
+    "location": null,
+    "upload_date": "2026-08-01"
   },
   {
     "id": "national-climate-risk-assessment",
@@ -46,7 +53,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
     ],
     "tags": null,
     "summary": "Comment on the framework used to identify, compare and prioritise nationally significant climate risks.",
-    "location": null
+    "location": null,
+    "upload_date": "2026-08-04"
   },
   {
     "id": "murray-darling-basin-plan-review",
@@ -68,7 +76,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
     ],
     "tags": null,
     "summary": "Share evidence and experience to inform the first statutory review of the Murray–Darling Basin Plan.",
-    "location": null
+    "location": null,
+    "upload_date": "2026-08-05"
   },
   {
     "id": "offshore-renewables-guidance",
@@ -147,7 +156,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
           ]
         ]
       }
-    }
+    },
+    "upload_date": "2026-08-10"
   },
   {
     "id": "victorian-waterway-health",
@@ -220,7 +230,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
           ]
         ]
       }
-    }
+    },
+    "upload_date": "2026-08-03"
   },
   {
     "id": "circular-economy-regulations",
@@ -251,7 +262,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
           -37.8136
         ]
       }
-    }
+    },
+    "upload_date": "2026-08-17"
   },
   {
     "id": "cultural-landscape-guidelines",
@@ -275,7 +287,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
       "Invite-only"
     ],
     "summary": "Upcoming consultation on recognising and protecting Aboriginal cultural landscapes in environmental planning.",
-    "location": null
+    "location": null,
+    "upload_date": "2026-09-07"
   },
   {
     "id": "nature-repair-methods",
@@ -296,7 +309,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
     ],
     "tags": null,
     "summary": "Upcoming opportunity to comment on biodiversity assessment and restoration methods for new projects.",
-    "location": null
+    "location": null,
+    "upload_date": "2026-09-21"
   },
   {
     "id": "urban-forest-controls",
@@ -318,7 +332,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
     ],
     "tags": null,
     "summary": "Completed consultation on proposed planning controls to protect canopy trees in growing Victorian suburbs.",
-    "location": null
+    "location": null,
+    "upload_date": "2026-05-11"
   },
   {
     "id": "epbc-offsets-policy",
@@ -339,7 +354,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
     ],
     "tags": null,
     "summary": "Completed consultation on restoration contributions and environmental offsets under national law.",
-    "location": null
+    "location": null,
+    "upload_date": "2026-04-20"
   },
   {
     "id": "victorian-coastal-strategy",
@@ -362,7 +378,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
     ],
     "tags": null,
     "summary": "Completed consultation on priorities for resilient coastlines, marine ecosystems and coastal communities.",
-    "location": null
+    "location": null,
+    "upload_date": "2026-03-16"
   },
   {
     "id": "critical-minerals-review",
@@ -386,7 +403,8 @@ SELECT * FROM jsonb_populate_recordset(NULL::public.opportunities, $fixtures$
       "Invite-only"
     ],
     "summary": "Completed review of environmental, community and economic priorities for Australia’s critical minerals sector.",
-    "location": null
+    "location": null,
+    "upload_date": "2026-02-09"
   }
 ]
 $fixtures$::jsonb);
@@ -397,8 +415,8 @@ INSERT INTO public.websites (id, tags) VALUES
 ON CONFLICT (id) DO UPDATE SET tags = EXCLUDED.tags;
 
 -- Create history first, then lock in canonical URL order like the scraper.
-INSERT INTO public.article_history (source_url, title)
-SELECT source_url, title FROM opportunity_seed ORDER BY source_url
+INSERT INTO public.article_history (source_url, title, upload_date)
+SELECT source_url, title, upload_date FROM opportunity_seed ORDER BY source_url
 ON CONFLICT (source_url) DO NOTHING;
 
 SELECT source_url FROM public.article_history
@@ -429,7 +447,8 @@ WITH saved AS (
 ), remembered AS (
   UPDATE public.article_history AS history SET
     title = saved.title,
-    hash = encode(sha256(convert_to(to_jsonb(seed)::text, 'UTF8')), 'hex')
+    upload_date = COALESCE(history.upload_date, seed.upload_date),
+    hash = encode(sha256(convert_to((to_jsonb(seed) - 'upload_date')::text, 'UTF8')), 'hex')
   FROM saved JOIN opportunity_seed AS seed USING (source_url)
   WHERE history.source_url = saved.source_url AND NOT history.deleted
   RETURNING history.source_url

@@ -3,6 +3,7 @@ import {
   bigserial,
   boolean,
   check,
+  date,
   integer,
   jsonb,
   pgEnum,
@@ -99,10 +100,12 @@ export const articleHistory = pgTable('article_history', {
   sourceUrl: text('source_url').primaryKey(),
   title: text('title').notNull(),
   hash: text('hash'),
+  uploadDate: date('upload_date', { mode: 'string' }).default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date`),
   deleted: boolean('deleted').notNull().default(false)
 }, table => [
   check('article_history_source_url_https', sql`${table.sourceUrl} ~ '^https://[^[:space:]]+$'`),
   check('article_history_title_nonempty', sql`${table.title} ~ '[^[:space:]]'`),
+  check('article_history_upload_date_finite', sql`${table.uploadDate} IS NULL OR isfinite(${table.uploadDate})`),
   check('article_history_hash_valid', sql`${table.hash} IS NULL OR ${table.hash} ~ '^[0-9a-f]{64}$'`)
 ])
 

@@ -60,6 +60,7 @@ describe('development SQL seed and database catalogue', () => {
       expect(history.title).toBe(rows.find(row => row.sourceUrl === history.sourceUrl)?.title)
       expect(history.deleted).toBe(false)
       expect(history.hash).toMatch(/^[0-9a-f]{64}$/)
+      expect(history.uploadDate).toMatch(/^2026-\d{2}-\d{2}$/)
     }
     expect(await connection.db.select().from(websites)).toHaveLength(2)
     const repository = createOpportunityRepository(connection.db)
@@ -68,6 +69,7 @@ describe('development SQL seed and database catalogue', () => {
     const month = await readOpportunity('nature-repair-methods', repository)
     expect(month.opportunity.submissionDeadline).toBe('2026-11')
     expect(month.opportunity.startDate).toBe('2026-09-21T00:00:00.000Z')
+    expect(histories.find(history => history.sourceUrl === month.opportunity.sourceUrl)?.uploadDate).toBe('2026-09-21')
     const exact = await readOpportunity('cultural-landscape-guidelines', repository)
     expect(exact.opportunity.submissionDeadline).toBe('2026-11-06T23:59:59.000Z')
     const ids = (await listOpportunities(repository)).map(row => row.id)
@@ -87,6 +89,20 @@ describe('development SQL seed and database catalogue', () => {
     expect(await repository.findById('nature-repair-methods')).toBeNull()
     expect((await repository.findById('existing-stable-id'))?.title).toBe('New methods for the Nature Repair Market')
     expect(await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)).toEqual(before)
+  })
+
+  it('fills missing legacy seed dates while preserving known upload dates and content hashes', async () => {
+    await seedDatabase(connection.client)
+    const before = await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)
+    const changedUrl = before[0]!.sourceUrl
+    const missingUrl = before[1]!.sourceUrl
+    await connection.db.update(articleHistory).set({ uploadDate: '2020-02-29' }).where(eq(articleHistory.sourceUrl, changedUrl))
+    await connection.db.update(articleHistory).set({ uploadDate: null }).where(eq(articleHistory.sourceUrl, missingUrl))
+    await seedDatabase(connection.client)
+    const after = await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)
+    expect(after[0]?.uploadDate).toBe('2020-02-29')
+    expect(after[1]?.uploadDate).toBe(before[1]?.uploadDate)
+    expect(after.map(history => history.hash)).toEqual(before.map(history => history.hash))
   })
 
   it('skips deleted URLs without clearing their marker or last successful hash', async () => {
