@@ -10,11 +10,55 @@ Migration `0003_shared-scraper-schema` adds opportunities, article history,
 website features, validation functions, and deletion triggers. Existing users,
 static pages, and website-index records are preserved. The public catalogue and
 detail pages read opportunities and website features from PostgreSQL. Opportunity
-administration remains deferred.
+editing remains deferred; administrators can browse tracked articles.
 
 Migration `0004_deadline-precision` adds month-only deadlines without changing
 existing timestamps. Existing rows and inserts that omit precision default to
 `datetime`. Apply migrations before updating the scraper to write month precision.
+
+## Article upload date
+
+Migration `0005_article-history-upload-date` adds `article_history.upload_date`,
+exposed by Drizzle as `uploadDate`. It is a PostgreSQL `date` (`YYYY-MM-DD`),
+containing a day, month and year without a time. New history rows default to the
+current UTC date; writers can supply a known first-upload date explicitly.
+Updating a scrape hash or deleting an opportunity preserves the upload date.
+Existing history rows remain null because their original upload date is unknown.
+Only finite dates are accepted when supplied.
+
+## Originating scraper source
+
+Migration `0006_article-history-source-index` adds nullable
+`article_history.source_index_id` (`sourceIndexId` in Drizzle), referencing the
+numeric `website_indexes.id`. Apply migrations before updating external writers.
+Supply the ID of the index that discovered the article when creating its history
+placeholder. This is separate from the platform's text `website_id`.
+
+A null source ID means unknown/unassigned; the admin browser lists those records
+under **Unassigned articles**. Existing writers that omit the field continue to
+work. The migration backfills only a unique most-specific index URL match using
+the same HTTPS origin and a whole path prefix. It ignores query strings,
+fragments, and trailing slashes; ambiguous matches stay null. This is a one-time
+backfill, not a trigger that guesses the source for future inserts. Scrapers
+should record the originating index explicitly even when its discovery and
+article paths differ.
+
+For example, create history first using bound parameters:
+
+~~~sql
+INSERT INTO public.article_history (source_url, title, source_index_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (source_url) DO NOTHING;
+SELECT deleted FROM public.article_history WHERE source_url = $1 FOR UPDATE;
+~~~
+
+For a known originating index, after locking and checking `deleted = false`, a
+writer may fill a previously null association with
+`source_index_id = COALESCE(source_index_id, $3)`. Preserve existing known
+associations, upload dates, hashes, and deletion markers. Finish the existing
+opportunity/history transaction below as usual. Deleting an index sets source
+references to null and preserves the entire history row. Existing opportunity
+deletion triggers need no change and preserve the source association.
 
 ## Website identity
 
@@ -171,8 +215,12 @@ API reads still use `DATABASE_URL`, including in production.
 `scripts/seed.sql` contains the complete synthetic opportunity collection and
 website features. It creates matching `article_history` rows linked by the same
 unique placeholder URL, with a lowercase SHA-256 hash of each normalized seed
-row's JSONB representation (timestamps normalized to UTC). These are synthetic
-fixtures, not claims that a network scrape occurred.
+row's JSONB representation (timestamps normalized to UTC, excluding upload-date
+and source-index metadata). Every fixture includes an explicit example upload
+date. Reruns fill missing dates and source associations but preserve known values
+and deletion markers. The seed resolves existing Engage Victoria/DCCEEW registry
+entries by index URL; missing or duplicate matches leave the source unassigned.
+These are synthetic fixtures, not claims that a network scrape occurred.
 
 The seed follows history-first locking, preserves existing IDs on URL conflicts,
 and skips deletion markers without clearing them. Unrelated rows remain intact.
