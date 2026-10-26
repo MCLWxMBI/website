@@ -371,3 +371,30 @@ interface OpportunityLocation {
 - Missing SHOULD fields are not errors because the documented frontend
   fallbacks apply.
 - Missing location is not an error and must not produce an empty map.
+
+## Admin scraper (private)
+
+All routes require an enabled administrator. Responses use `Cache-Control:
+private, no-store`; scrape history is never returned by public catalogue APIs.
+
+- `GET /api/admin/scraper/sources` returns
+  `{ sources: AdminScraperSource[], unassignedCount: number }`. Each source
+  contains `id` (decimal string), `name`, `indexUrl`, `active`, and
+  `articleCount`. Sources include empty and inactive entries, ordered by name
+  ignoring case, then ID. Unassigned history has a null originating index ID.
+- `GET /api/admin/scraper/articles?source=<index-id|unassigned>&q=<title>&page=<number>`
+  returns `{ items, total, page, pageSize: 25 }`. Search is an optional literal,
+  case-insensitive title substring of at most 200 characters. Page is a positive
+  safe integer, defaults to 1, and is clamped to the final page after filtering.
+  Items are ordered by `uploadDate` descending, null dates last, then
+  `sourceUrl` ascending, before pagination.
+- Each article contains `sourceUrl`, `title`, nullable `uploadDate` in
+  `YYYY-MM-DD` format, `deleted`, `hasSuccessfulScrape`, and nullable
+  `opportunityId`. A successful scrape means a stored non-null hash; hashes
+  themselves remain internal. Deleted takes precedence in the displayed status.
+- Empty lists succeed. Unknown numeric source IDs return 404, malformed query
+  values return 400, and configuration/database failures return a generic 503.
+  Existing authentication errors continue to apply.
+
+These endpoints use `DATABASE_URL` and are read-only. The public opportunity
+contract is unchanged. Shared types are in `shared/types/admin-scraper.ts`.

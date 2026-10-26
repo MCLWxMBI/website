@@ -103,9 +103,9 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
     expect(tables.map(row => row.table_name)).toEqual([
       'article_history', 'opportunities', 'static_pages', 'users', 'website_indexes', 'websites'
     ])
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(6)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(7)
     await migrate(connection.db, { migrationsFolder: './drizzle' })
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(6)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(7)
     if (scenario !== 'fresh') {
       expect((await connection.db.select().from(users))[0]?.username).toBe('existing-admin')
       expect((await connection.db.select().from(staticPages))[0]?.contentHtml).toBe('<h1>Existing page</h1>')
@@ -250,7 +250,7 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
     await connection.db.update(articleHistory).set({ hash }).where(eq(articleHistory.sourceUrl, row.sourceUrl))
     await connection.db.delete(opportunities).where(eq(opportunities.id, row.id))
     const [history] = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, row.sourceUrl))
-    expect(history).toEqual({ sourceUrl: row.sourceUrl, title: row.title, hash, deleted: true, uploadDate: before!.uploadDate })
+    expect(history).toEqual({ sourceUrl: row.sourceUrl, title: row.title, hash, deleted: true, uploadDate: before!.uploadDate, sourceIndexId: null })
     expect(await connection.db.select().from(opportunities).where(eq(opportunities.id, row.id))).toEqual([])
     await rejectsConstraint(connection.db.insert(opportunities).values(values({ sourceUrl: row.sourceUrl })))
     await connection.db.delete(articleHistory).where(eq(articleHistory.sourceUrl, row.sourceUrl))

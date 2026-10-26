@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import AdminWebsiteIndexes from '~/components/AdminWebsiteIndexes.vue'
+import AdminScraper from '~/components/AdminScraper.vue'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useSeoMeta({ title: 'Administration' })
 const route = useRoute()
-const tabs = ['pages', 'indexes', 'submissions'] as const
+const tabs = ['pages', 'indexes', 'scraper'] as const
 type AdminTab = typeof tabs[number]
-const selected = computed<AdminTab>(() => tabs.includes(route.query.tab as AdminTab) ? route.query.tab as AdminTab : 'pages')
-const tabLabels: Record<AdminTab, string> = { pages: 'Pages', indexes: 'Indexes', submissions: 'Submissions' }
+const selected = computed<AdminTab>(() => ['submissions', 'articles'].includes(route.query.tab as string) ? 'scraper' : tabs.includes(route.query.tab as AdminTab) ? route.query.tab as AdminTab : 'pages')
+const tabLabels: Record<AdminTab, string> = { pages: 'Pages', indexes: 'Indexes', scraper: 'Scraper' }
 const pages: { title: string; path: string; editPath: string; description: string }[] = [
   { title: 'About', path: '/about', editPath: '/admin/pages/about', description: 'About ECHO, the MCLE initiative, and frequently asked questions.' },
   { title: 'Resources', path: '/resources', editPath: '/admin/pages/resources', description: 'Guidance for participating in public consultations.' }
@@ -37,9 +38,8 @@ const pages: { title: string; path: string; editPath: string; description: strin
     <section id="panel-indexes" :hidden="selected !== 'indexes'" aria-labelledby="heading-indexes">
       <AdminWebsiteIndexes />
     </section>
-    <section id="panel-submissions" :hidden="selected !== 'submissions'" aria-labelledby="heading-submissions">
-      <h2 id="heading-submissions">Submissions</h2>
-      <div class="admin-card"><h3>Consultation management coming soon</h3><p>This area will let administrators manage the consultation listings displayed on ECHO.</p></div>
+    <section v-if="selected === 'scraper'" id="panel-scraper" aria-labelledby="heading-scraper">
+      <AdminScraper />
     </section>
   </section>
 </template>

@@ -1,0 +1,38 @@
+import { describe, expect, it, vi } from 'vitest'
+import { parseScraperQuery, readAdminScraperArticles, readAdminScraperSources, type AdminScraperRepository } from '../../server/services/admin-scraper'
+
+const repository = (): AdminScraperRepository => ({
+  sources: vi.fn().mockResolvedValue({ sources: [], unassignedCount: 0 }),
+  articles: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 })
+})
+describe('admin scraper queries', () => {
+  it('accepts bigint source IDs, unassigned articles, and normalized searches', () => {
+    expect(parseScraperQuery({ source: '9223372036854775807', q: ' Water ', page: '3' }))
+      .toEqual({ sourceId: 9223372036854775807n, q: 'Water', page: 3 })
+    expect(parseScraperQuery({ source: 'unassigned' })).toEqual({ sourceId: null, q: '', page: 1 })
+  })
+  it.each([
+    {}, { source: '0' }, { source: '-1' }, { source: '1.5' }, { source: '9223372036854775808' },
+    { source: ['1', '2'] }, { source: '1', page: '0' }, { source: '1', page: '1.1' },
+    { source: '1', page: '9007199254740992' }, { source: '1', page: ['1'] },
+    { source: '1', q: ['title'] }, { source: '1', q: 'a'.repeat(201) }
+  ])('rejects invalid input before querying: %j', async query => {
+    const repo = repository()
+    await expect(readAdminScraperArticles(query, repo)).rejects.toMatchObject({ statusCode: 400 })
+    expect(repo.articles).not.toHaveBeenCalled()
+  })
+  it('distinguishes empty sources from missing sources', async () => {
+    const repo = repository()
+    await expect(readAdminScraperArticles({ source: '1' }, repo)).resolves.toMatchObject({ items: [], total: 0 })
+    vi.mocked(repo.articles).mockResolvedValue(null)
+    await expect(readAdminScraperArticles({ source: '2' }, repo)).rejects.toMatchObject({ statusCode: 404 })
+  })
+  it('returns generic database failures for both reads', async () => {
+    const repo = repository()
+    vi.mocked(repo.articles).mockRejectedValue(new Error('private DB credentials'))
+    vi.mocked(repo.sources).mockRejectedValue(new Error('private DB credentials'))
+    for (const promise of [readAdminScraperSources(repo), readAdminScraperArticles({ source: '1' }, repo)]) {
+      await expect(promise).rejects.toMatchObject({ statusCode: 503, statusMessage: expect.not.stringContaining('credentials') })
+    }
+  })
+})

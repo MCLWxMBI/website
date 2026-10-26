@@ -5,7 +5,8 @@ SET LOCAL TIME ZONE 'UTC';
 -- Upload dates are synthetic first-upload dates, separate from content hashes.
 CREATE TEMP TABLE opportunity_seed (
   LIKE public.opportunities,
-  upload_date date NOT NULL
+  upload_date date NOT NULL,
+  source_index_id bigint
 ) ON COMMIT DROP;
 
 INSERT INTO opportunity_seed
@@ -409,14 +410,24 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
 ]
 $fixtures$::jsonb);
 
+-- Resolve only the uniquely matching registry entry; the registry is seeded separately.
+UPDATE opportunity_seed AS seed SET source_index_id = (
+  SELECT CASE WHEN count(*) = 1 THEN min(id) ELSE NULL END
+  FROM public.website_indexes
+  WHERE rtrim(index_url, '/') = CASE seed.website_id
+    WHEN 'engage-victoria' THEN 'https://engage.vic.gov.au/project'
+    WHEN 'dcceew-consult' THEN 'https://consult.dcceew.gov.au/find-consultations'
+  END
+);
+
 INSERT INTO public.websites (id, tags) VALUES
   ('engage-victoria', ARRAY['Login required', 'Online submission']),
   ('dcceew-consult', ARRAY['Online submission'])
 ON CONFLICT (id) DO UPDATE SET tags = EXCLUDED.tags;
 
 -- Create history first, then lock in canonical URL order like the scraper.
-INSERT INTO public.article_history (source_url, title, upload_date)
-SELECT source_url, title, upload_date FROM opportunity_seed ORDER BY source_url
+INSERT INTO public.article_history (source_url, title, upload_date, source_index_id)
+SELECT source_url, title, upload_date, source_index_id FROM opportunity_seed ORDER BY source_url
 ON CONFLICT (source_url) DO NOTHING;
 
 SELECT source_url FROM public.article_history
@@ -448,7 +459,8 @@ WITH saved AS (
   UPDATE public.article_history AS history SET
     title = saved.title,
     upload_date = COALESCE(history.upload_date, seed.upload_date),
-    hash = encode(sha256(convert_to((to_jsonb(seed) - 'upload_date')::text, 'UTF8')), 'hex')
+    source_index_id = COALESCE(history.source_index_id, seed.source_index_id),
+    hash = encode(sha256(convert_to((to_jsonb(seed) - 'upload_date' - 'source_index_id')::text, 'UTF8')), 'hex')
   FROM saved JOIN opportunity_seed AS seed USING (source_url)
   WHERE history.source_url = saved.source_url AND NOT history.deleted
   RETURNING history.source_url

@@ -1,9 +1,11 @@
 import { sql } from 'drizzle-orm'
 import {
+  bigint,
   bigserial,
   boolean,
   check,
   date,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -100,9 +102,11 @@ export const articleHistory = pgTable('article_history', {
   sourceUrl: text('source_url').primaryKey(),
   title: text('title').notNull(),
   hash: text('hash'),
+  sourceIndexId: bigint('source_index_id', { mode: 'bigint' }).references(() => websiteIndexes.id, { onDelete: 'set null' }),
   uploadDate: date('upload_date', { mode: 'string' }).default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date`),
   deleted: boolean('deleted').notNull().default(false)
 }, table => [
+  index('article_history_source_recent_idx').on(table.sourceIndexId, table.uploadDate.desc().nullsLast(), table.sourceUrl),
   check('article_history_source_url_https', sql`${table.sourceUrl} ~ '^https://[^[:space:]]+$'`),
   check('article_history_title_nonempty', sql`${table.title} ~ '[^[:space:]]'`),
   check('article_history_upload_date_finite', sql`${table.uploadDate} IS NULL OR isfinite(${table.uploadDate})`),
