@@ -8,6 +8,7 @@ useSeoMeta({
 })
 
 const { data, error, status, refresh } = await useFetch<WebsiteIndexesResponse>('/api/indexes', {
+  key: 'public-website-indexes',
   default: () => []
 })
 

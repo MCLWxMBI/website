@@ -15,6 +15,8 @@ export type AdminWebsiteIndexesResponse = AdminWebsiteIndex[]
 
 export interface WebsiteIndexUpsertRequest {
   id?: string
+  /** Required for existing rows; compare with the last loaded active value. */
+  expectedActive?: boolean
   name: string
   indexUrl: string
   active: boolean

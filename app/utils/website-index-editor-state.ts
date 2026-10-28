@@ -62,7 +62,10 @@ export function buildWebsiteIndexUpdateRequest(
         active: draft.active,
         notes: draft.notes
       }
-      if (draft.id) item.id = draft.id
+      if (draft.id) {
+        item.id = draft.id
+        item.expectedActive = baselineById.get(draft.id)?.active ?? draft.active
+      }
       return item
     })
 

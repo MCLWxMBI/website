@@ -26,6 +26,15 @@ Updating a scrape hash or deleting an opportunity preserves the upload date.
 Existing history rows remain null because their original upload date is unknown.
 Only finite dates are accepted when supplied.
 
+## Source selection
+
+Select scraper entry points from `website_indexes WHERE active = TRUE` before
+each source-selection run. Administrators stage switches or bulk choices in the
+Scraper panel, then save them to the existing `active` boolean. The Indexes editor
+uses the same flags. Disabling does not cancel work already running and never
+removes opportunities or article history. The browser backup is UI recovery data,
+not a second source of scraper configuration. No schema change is required.
+
 ## Originating scraper source
 
 Migration `0006_article-history-source-index` adds nullable

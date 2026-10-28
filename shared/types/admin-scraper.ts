@@ -24,3 +24,13 @@ export interface AdminScraperArticlesResponse {
   page: number
   pageSize: number
 }
+
+export interface ScraperSourceUpdate {
+  id: string
+  active: boolean
+  expectedActive: boolean
+}
+
+export interface UpdateScraperSourcesRequest {
+  updates: ScraperSourceUpdate[]
+}

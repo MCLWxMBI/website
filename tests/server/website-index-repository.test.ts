@@ -34,7 +34,8 @@ describe('admin website index repository', () => {
       { id: 2n, name: 'Updated', indexUrl: 'https://updated.example', active: false, notes: 'Note' },
       { id: 10n, name: 'New', indexUrl: 'https://new.example', active: true, notes: null }
     ]
-    const whereExisting = vi.fn().mockResolvedValue([{ id: 2n }, { id: 7n }])
+    const lockExisting = vi.fn().mockResolvedValue([{ id: 2n, active: true }, { id: 7n, active: true }])
+    const whereExisting = vi.fn(() => ({ orderBy: vi.fn(() => ({ for: lockExisting })) }))
     const orderBy = vi.fn().mockResolvedValue(finalRows)
     const select = vi.fn()
       .mockImplementationOnce(() => ({ from: vi.fn(() => ({ where: whereExisting })) }))
@@ -53,7 +54,7 @@ describe('admin website index repository', () => {
     const db = { transaction } as unknown as ReturnType<typeof connectDatabase>['db']
 
     const result = await createAdminWebsiteIndexRepository(db).applyBatch([
-      { id: 2n, name: 'Updated', indexUrl: 'https://updated.example', active: false, notes: 'Note' },
+      { id: 2n, expectedActive: true, name: 'Updated', indexUrl: 'https://updated.example', active: false, notes: 'Note' },
       { name: 'New', indexUrl: 'https://new.example', active: true, notes: null }
     ], [7n])
 
@@ -72,7 +73,7 @@ describe('admin website index repository', () => {
 
   it('aborts the transaction when an expected existing ID is missing', async () => {
     const tx = {
-      select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) }))
+      select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ orderBy: vi.fn(() => ({ for: vi.fn().mockResolvedValue([]) })) })) })) }))
     }
     const transaction = vi.fn(async (callback: (transactionClient: typeof tx) => unknown) => callback(tx))
     const db = { transaction } as unknown as ReturnType<typeof connectDatabase>['db']

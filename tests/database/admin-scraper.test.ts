@@ -9,7 +9,8 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { connectDatabase } from '../../server/database'
 import { articleHistory, opportunities, websiteIndexes, websites } from '../../server/database/schema'
 import { createAdminScraperRepository } from '../../server/utils/admin-scraper-repository'
-import { readAdminScraperArticles } from '../../server/services/admin-scraper'
+import { createAdminWebsiteIndexRepository } from '../../server/utils/website-index-repository'
+import { saveAdminScraperSources, readAdminScraperArticles } from '../../server/services/admin-scraper'
 import { seedDatabase } from '../../scripts/seed-database'
 
 const databaseUrl = process.env.TEST_DATABASE_URL
@@ -77,6 +78,59 @@ describe('source tracking and admin scraper panel', () => {
       await connection.db.insert(articleHistory).values({ sourceUrl: `https://example.gov.au/${path}`, title: path,
         sourceIndexId: sourceId, uploadDate: '2026-01-01', ...overrides })
     }
+
+    it('saves only source flags and rereads source counts without changing content or metadata', async () => {
+      await seedDatabase(connection.client)
+      await connection.db.update(websiteIndexes).set({ notes: 'Keep these notes' }).where(eq(websiteIndexes.id, sourceId))
+      const before = await connection.db.select().from(websiteIndexes).orderBy(websiteIndexes.id)
+      const histories = await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)
+      const records = await connection.db.select().from(opportunities).orderBy(opportunities.id)
+      const features = await connection.db.select().from(websites).orderBy(websites.id)
+      const result = await saveAdminScraperSources({ updates: [
+        { id: sourceId.toString(), active: true, expectedActive: false }
+      ] }, repository)
+      expect(result.sources.find(row => row.id === sourceId.toString())?.active).toBe(true)
+      const after = await connection.db.select().from(websiteIndexes).orderBy(websiteIndexes.id)
+      expect(after).toEqual(before.map(row => row.id === sourceId ? { ...row, active: true } : row))
+      expect(await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)).toEqual(histories)
+      expect(await connection.db.select().from(opportunities).orderBy(opportunities.id)).toEqual(records)
+      expect(await connection.db.select().from(websites).orderBy(websites.id)).toEqual(features)
+    })
+    it('rejects missing or stale source rows atomically, retaining every existing flag', async () => {
+      const before = await repository.sources()
+      for (const invalid of [
+        { id: '99999', active: false, expectedActive: true },
+        { id: '2', active: false, expectedActive: false }
+      ]) {
+        await expect(saveAdminScraperSources({ updates: [
+          { id: sourceId.toString(), active: true, expectedActive: false }, invalid
+        ] }, repository)).rejects.toMatchObject({ statusCode: 409 })
+        expect(await repository.sources()).toEqual(before)
+      }
+    })
+    it('serializes simultaneous writes and rejects the stale writer after waiting for its row lock', async () => {
+      const results = await Promise.allSettled([0, 1].map(() => saveAdminScraperSources({ updates: [
+        { id: sourceId.toString(), active: true, expectedActive: false }
+      ] }, repository)))
+      expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1)
+      const failed = results.find(result => result.status === 'rejected') as PromiseRejectedResult
+      expect(failed.reason.statusCode).toBe(409)
+      expect((await repository.sources()).sources.find(row => row.id === sourceId.toString())?.active).toBe(true)
+    })
+    it('prevents a stale Indexes editor from overwriting a Scraper save or partially inserting other indexes', async () => {
+      const indexes = createAdminWebsiteIndexRepository(connection.db)
+      await repository.updateSources([{ id: sourceId, active: true, expectedActive: false }])
+      await expect(indexes.applyBatch([
+        { name: 'Must roll back', indexUrl: 'https://new.example', active: true, notes: null },
+        { id: sourceId, expectedActive: false, name: 'Stale name', indexUrl: 'https://stale.example', active: false, notes: null }
+      ], [])).rejects.toThrow()
+      expect((await indexes.all()).map(row => row.name)).not.toContain('Must roll back')
+      expect((await indexes.all()).find(row => row.id === sourceId)).toMatchObject({ name: 'Zulu', active: true })
+      await indexes.applyBatch([
+        { id: sourceId, expectedActive: true, name: 'Zulu edited', indexUrl: 'https://example.gov.au/project', active: false, notes: 'Editor note' }
+      ], [])
+      expect((await repository.sources()).sources.find(row => row.id === sourceId.toString())).toMatchObject({ name: 'Zulu edited', active: false })
+    })
     it('includes empty/inactive sources and counts all history statuses and unassigned rows', async () => {
       await history('success', { hash: 'b'.repeat(64) }); await history('deleted', { deleted: true })
       await history('tracked'); await history('unknown', { sourceIndexId: null })

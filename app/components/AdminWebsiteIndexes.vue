@@ -10,6 +10,7 @@ import {
 
 const { $csrfFetch } = useNuxtApp()
 const { data, error: loadError, status, refresh } = await useFetch<AdminWebsiteIndexesResponse>('/api/admin/indexes', {
+  key: 'admin-website-indexes',
   default: () => []
 })
 
@@ -31,6 +32,8 @@ function loadRows(rows: AdminWebsiteIndexesResponse) {
   baseline.value = snapshotWebsiteIndexDrafts(baselineDrafts.value)
   loaded.value = true
 }
+
+watch(data, rows => { if (!dirty.value && !saving.value && !loadError.value) loadRows(rows) })
 
 async function retryLoad() {
   error.value = ''
@@ -79,8 +82,12 @@ async function saveAll() {
       method: 'PUT',
       body: buildWebsiteIndexUpdateRequest(drafts.value, baselineDrafts.value)
     })
+    data.value = result
     loadRows(result)
     feedback.value = 'Website index changes saved.'
+    await refreshNuxtData(['admin-scraper-sources', 'public-website-indexes']).catch(() => {
+      feedback.value += ' Reload Scraper to see the saved values.'
+    })
   } catch (cause) {
     const statusCode = cause && typeof cause === 'object' && 'statusCode' in cause ? cause.statusCode : undefined
     error.value = statusCode === 403

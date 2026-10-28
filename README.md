@@ -330,13 +330,13 @@ sort last. Upload date means first upload, not the latest scraper run.
 
 Unassigned articles have a null `article_history.source_index_id`. Their original
 article URLs remain available. Deleting an index retains its articles under
-Unassigned articles. The browser is read-only; it links to original articles
-and to any existing public opportunity.
+Unassigned articles. Article browsing links to the original articles and any
+existing public opportunity.
 
 Migration `0006_article-history-source-index` adds the nullable source foreign
 key and backfills only unambiguous, most-specific index URL prefixes. Apply it
 with `npm run db:migrate` before updating scraper writers to supply the originating
-index ID. Ambiguous or unmatched legacy URLs remain unassigned. Both admin APIs
+index ID. Ambiguous or unmatched legacy URLs remain unassigned. All admin APIs
 require an enabled administrator and use private, no-store responses.
 
 The separate root `seed.sql` populates the source registry. Running
@@ -344,6 +344,30 @@ The separate root `seed.sql` populates the source registry. Running
 with its Engage Victoria and DCCEEW entries. Without those entries the catalogue
 seed still succeeds and its articles appear as unassigned. Seeding preserves
 known source associations and does not create or modify registry entries.
+
+On the source overview, each **Enabled for scraping** switch edits a draft.
+**Enable all** and **Disable all** also change only the draft; **Save changes**
+writes changed flags to `website_indexes.active`. Disabled sources and their
+articles remain visible. No schema migration is needed for these controls.
+
+Before the first bulk action, the panel backs up the current visible choices,
+including unsaved edits. The versioned backup stays in this browser's
+`localStorage`, scoped to your administrator account, through refreshes, browser
+restarts, repeated bulk actions, and saves. **Restore previous settings** loads
+matching source IDs and URLs into the draft; it still requires **Save changes**.
+Removed or changed sources are skipped and new sources retain their choices.
+**Replace saved settings** deliberately replaces the backup with the current
+visible choices. If browser storage is unavailable, bulk changes are blocked
+until a backup can be stored; individual source switches remain usable.
+
+A conflicting save applies nothing and keeps your choices and backup. Reload
+sources to resolve it. Leaving the panel or switching admin tabs warns about
+unsaved source settings. Indexes reads the same flags; stale Indexes edits also
+receive a conflict instead of overwriting a Scraper change.
+
+The external scraper must select `website_indexes` rows where `active = TRUE`
+when choosing sources. Disabling affects subsequent source selection; it does
+not cancel a running scrape or remove previously scraped articles.
 
 ## Backend unit tests
 

@@ -382,6 +382,16 @@ private, no-store`; scrape history is never returned by public catalogue APIs.
   contains `id` (decimal string), `name`, `indexUrl`, `active`, and
   `articleCount`. Sources include empty and inactive entries, ordered by name
   ignoring case, then ID. Unassigned history has a null originating index ID.
+- `PATCH /api/admin/scraper/sources` accepts
+  `{ updates: [{ id, active, expectedActive }] }` and returns the refreshed
+  `AdminScraperSourcesResponse`. IDs are unique positive bigint decimal strings;
+  both flags must be booleans. Only changed sources need to be sent, and an empty
+  update list is allowed. Only existing `website_indexes.active` values are
+  updated. A transaction locks affected rows in ID order and checks every loaded
+  flag before writing any changes. Missing rows or changed flags return `409`
+  with no partial writes. Invalid input returns `400`; database failures return
+  a generic `503`. Writes require the existing CSRF token and administrator
+  authorization. Browser snapshots never leave the browser or enter this API.
 - `GET /api/admin/scraper/articles?source=<index-id|unassigned>&q=<title>&page=<number>`
   returns `{ items, total, page, pageSize: 25 }`. Search is an optional literal,
   case-insensitive title substring of at most 200 characters. Page is a positive
@@ -396,5 +406,9 @@ private, no-store`; scrape history is never returned by public catalogue APIs.
   values return 400, and configuration/database failures return a generic 503.
   Existing authentication errors continue to apply.
 
-These endpoints use `DATABASE_URL` and are read-only. The public opportunity
-contract is unchanged. Shared types are in `shared/types/admin-scraper.ts`.
+These endpoints use `DATABASE_URL`; article reads remain read-only. The public
+opportunity contract is unchanged. Shared types are in `shared/types/admin-scraper.ts`.
+
+Existing-row upserts to `PUT /api/admin/indexes` must also include a boolean
+`expectedActive` alongside `id`. The editor sends its last loaded flag; stale
+flags return `409` and roll back the batch. New rows omit `expectedActive`.
