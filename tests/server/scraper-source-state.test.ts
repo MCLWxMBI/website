@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   buildScraperSourceUpdates, createScraperSnapshot, parseScraperSnapshot, restoreScraperSnapshot,
-  scraperSnapshotKey, scraperSourceDrafts, storeScraperSnapshot, isScraperTab
+  scraperSnapshotKey, scraperSourceDrafts, storeScraperSnapshot, isScraperTab,
+  parseScraperSourceMode, reconcileScraperSourceMode, scraperModeKey, scraperSelectionSignature
 } from '../../app/utils/scraper-source-state'
 
 const sources = [
@@ -65,5 +66,50 @@ describe('scraper source draft and browser backup', () => {
   it('recognizes only the scraper panel and its existing aliases when guarding tab navigation', () => {
     expect(['scraper', 'articles', 'submissions'].every(isScraperTab)).toBe(true)
     expect(['indexes', 'pages', undefined, ['scraper']].some(isScraperTab)).toBe(false)
+  })
+})
+
+
+describe('scraper master pause', () => {
+  it('pauses effective flags without changing any individual switch positions', () => {
+    const drafts = scraperSourceDrafts(sources)
+    const before = scraperSelectionSignature(drafts)
+    expect(buildScraperSourceUpdates(drafts, true)).toEqual({ updates: [{ id: '1', active: false, expectedActive: true }] })
+    expect(scraperSelectionSignature(drafts)).toBe(before)
+    expect(buildScraperSourceUpdates(drafts, false)).toEqual({ updates: [] })
+  })
+  it('reloads a saved pause with the original mixed selection and refreshed database baselines', () => {
+    const mode = { version: 1 as const, paused: true, selection: createScraperSnapshot(scraperSourceDrafts(sources), captured) }
+    const state = reconcileScraperSourceMode(sources.map(source => ({ ...source, active: false })), mode)
+    expect(state.paused).toBe(true)
+    expect(state.drafts.map(source => source.active)).toEqual([true, false])
+    expect(buildScraperSourceUpdates(state.drafts, true)).toEqual({ updates: [] })
+    expect(buildScraperSourceUpdates(state.drafts, false)).toEqual({ updates: [{ id: '1', active: true, expectedActive: false }] })
+  })
+  it('retains paused choices after an interrupted resume when the database is still off', () => {
+    const mode = { version: 1 as const, paused: false, selection: createScraperSnapshot(scraperSourceDrafts(sources), captured) }
+    const state = reconcileScraperSourceMode(sources.map(source => ({ ...source, active: false })), mode)
+    expect(state.paused).toBe(true)
+    expect(state.drafts.map(source => source.active)).toEqual([true, false])
+  })
+  it('takes external database changes over a stale local pause', () => {
+    const mode = { version: 1 as const, paused: true, selection: createScraperSnapshot(scraperSourceDrafts(sources), captured) }
+    const actual = sources.map(source => ({ ...source, active: source.id === '2' }))
+    expect(reconcileScraperSourceMode(actual, mode)).toEqual({ drafts: scraperSourceDrafts(actual), paused: false })
+  })
+  it('supports an all-off selection without confusing a saved pause with a resume', () => {
+    const actual = sources.map(source => ({ ...source, active: false }))
+    const selection = createScraperSnapshot(scraperSourceDrafts(actual), captured)
+    expect(reconcileScraperSourceMode(actual, { version: 1, paused: true, selection }).paused).toBe(true)
+    expect(reconcileScraperSourceMode(actual, { version: 1, paused: false, selection }).paused).toBe(false)
+  })
+  it('round-trips the separate per-administrator mode record and rejects malformed records', () => {
+    const mode = { version: 1, paused: true, selection: createScraperSnapshot(scraperSourceDrafts(sources), captured) }
+    expect(parseScraperSourceMode(JSON.stringify(mode))).toEqual(mode)
+    for (const raw of [null, 'bad json', '{}', JSON.stringify({ ...mode, version: 2 }), JSON.stringify({ ...mode, paused: 'true' })]) {
+      expect(parseScraperSourceMode(raw)).toBeNull()
+    }
+    expect(scraperModeKey(1)).not.toBe(scraperModeKey(2))
+    expect(scraperModeKey(1)).not.toBe(scraperSnapshotKey(1))
   })
 })

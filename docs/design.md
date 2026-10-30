@@ -229,8 +229,9 @@ username/password fields, autocomplete, pending feedback, and announced errors.
 The protected `/admin` route has Pages, Indexes, and Scraper sections. Pages
 lists About and Resources with public view and edit links. Scraper groups tracked
 articles by source, then shows articles by newest upload date with title search
-and pagination. Source switches and Enable all/Disable all stage choices until
-Save changes is used. A browser-local backup supports restoring previous choices.
+and pagination. Disable all stages a master pause and greys source cards without
+moving their switches. Enable all resumes the retained individual selections.
+Both actions require Save changes. A browser-local backup supports restoring previous choices.
 Selection is stored in
 `?tab=pages|indexes|scraper`, defaulting to Pages. Section links use native
 link keyboard behavior without custom arrow-key controls.

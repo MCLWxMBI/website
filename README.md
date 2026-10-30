@@ -346,9 +346,15 @@ seed still succeeds and its articles appear as unassigned. Seeding preserves
 known source associations and does not create or modify registry entries.
 
 On the source overview, each **Enabled for scraping** switch edits a draft.
-**Enable all** and **Disable all** also change only the draft; **Save changes**
-writes changed flags to `website_indexes.active`. Disabled sources and their
-articles remain visible. No schema migration is needed for these controls.
+**Disable all** stages a master pause: every source card turns grey and its
+switch is disabled, while each switch keeps its individual on/off position.
+**Enable all** removes the pause and resumes the individual choices; it does not
+turn previously unselected sources on. **Save changes** applies the effective
+flags to `website_indexes.active` (all false while paused). The retained choices
+and pause display are stored per administrator in this browser, so saving a
+pause and refreshing keeps the switch positions. Actual database changes made
+elsewhere take precedence over stale browser state. Article links remain usable.
+No schema migration is needed for these controls.
 
 Before the first bulk action, the panel backs up the current visible choices,
 including unsaved edits. The versioned backup stays in this browser's

@@ -3,7 +3,8 @@ import type { AdminScraperSourcesResponse } from '~~/shared/types/admin-scraper'
 import {
   buildScraperSourceUpdates, createScraperSnapshot, isScraperTab, parseScraperSnapshot,
   restoreScraperSnapshot, scraperSnapshotKey, scraperSourceDrafts, storeScraperSnapshot,
-  type ScraperSourceSnapshot
+  parseScraperSourceMode, reconcileScraperSourceMode, scraperModeKey, scraperSelectionSignature,
+  type ScraperSourceMode, type ScraperSourceSnapshot
 } from '~/utils/scraper-source-state'
 import AdminScraperArticles from './AdminScraperArticles.vue'
 
@@ -20,7 +21,13 @@ const saving = ref(false)
 const feedback = ref('')
 const error = ref('')
 const backup = ref<ScraperSourceSnapshot | null>(null)
-const dirty = computed(() => buildScraperSourceUpdates(drafts.value).updates.length > 0)
+const paused = ref(false)
+const savedPaused = ref(false)
+const savedSelection = ref(scraperSelectionSignature(drafts.value))
+const mode = ref<ScraperSourceMode | null>(null)
+const dirty = computed(() => paused.value !== savedPaused.value
+  || buildScraperSourceUpdates(drafts.value, paused.value).updates.length > 0
+  || scraperSelectionSignature(drafts.value) !== savedSelection.value)
 const busy = computed(() => saving.value || status.value === 'pending')
 const sourceName = computed(() => sourceKey.value === 'unassigned'
   ? 'Unassigned articles'
@@ -29,7 +36,11 @@ const backupTime = computed(() => backup.value
   ? new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(backup.value.capturedAt)) : '')
 
 function loadRows(result: AdminScraperSourcesResponse) {
-  drafts.value = scraperSourceDrafts(result.sources)
+  const state = reconcileScraperSourceMode(result.sources, mode.value)
+  drafts.value = state.drafts
+  paused.value = state.paused
+  savedPaused.value = state.paused
+  savedSelection.value = scraperSelectionSignature(state.drafts)
   loaded.value = true
 }
 watch(data, result => { if (result && !dirty.value && !saving.value) loadRows(result) })
@@ -44,6 +55,30 @@ function readBackup() {
     backup.value = parseScraperSnapshot(raw)
     if (raw && !backup.value) error.value = 'Saved browser settings are invalid. Replace saved settings to create a new backup.'
   } catch { error.value = 'Saved settings could not be read from this browser. Individual changes can still be saved.' }
+  readMode()
+}
+function readMode() {
+  mode.value = null
+  try {
+    mode.value = parseScraperSourceMode(window.localStorage.getItem(scraperModeKey(user.value?.id ?? 0)))
+  } catch { /* Current database values remain usable when browser storage is unavailable. */ }
+  if (data.value && !dirty.value && !saving.value) loadRows(data.value)
+}
+function persistMode() {
+  const next: ScraperSourceMode = { version: 1, paused: paused.value, selection: createScraperSnapshot(drafts.value) }
+  try {
+    const key = scraperModeKey(user.value?.id ?? 0)
+    const raw = JSON.stringify(next)
+    window.localStorage.setItem(key, raw)
+    if (window.localStorage.getItem(key) !== raw) throw new Error('Settings were not stored')
+  } catch {
+    if (paused.value || savedPaused.value) {
+      error.value = 'The source choices could not be saved in this browser. No pause or resume changes were applied. Check browser storage and try again.'
+      return false
+    }
+  }
+  mode.value = next
+  return true
 }
 function persistBackup(replace: boolean) {
   try {
@@ -64,9 +99,10 @@ function persistBackup(replace: boolean) {
 function setAll(active: boolean) {
   if (busy.value || !loaded.value || !drafts.value.length) return
   error.value = ''
-  if (!persistBackup(false)) return
-  drafts.value = drafts.value.map(source => ({ ...source, active }))
-  feedback.value = 'Bulk changes are staged. Save changes to apply them.'
+  if (!active && !persistBackup(false)) return
+  paused.value = !active
+  feedback.value = active ? 'Sources are ready to resume with their individual choices. Save changes to apply.'
+    : 'All sources are paused in the draft. Individual choices are preserved. Save changes to apply.'
 }
 function replaceBackup() {
   if (busy.value || !loaded.value || !drafts.value.length) return
@@ -93,12 +129,13 @@ async function reloadSources() {
 }
 async function saveChanges() {
   if (busy.value || !loaded.value || !dirty.value) return
-  saving.value = true
   feedback.value = ''
   error.value = ''
+  if (!persistMode()) return
+  saving.value = true
   try {
     const result = await $csrfFetch<AdminScraperSourcesResponse>('/api/admin/scraper/sources', {
-      method: 'PATCH', body: buildScraperSourceUpdates(drafts.value)
+      method: 'PATCH', body: buildScraperSourceUpdates(drafts.value, paused.value)
     })
     data.value = result
     loadRows(result)
@@ -140,11 +177,12 @@ onBeforeRouteUpdate(to => isScraperTab(to.query.tab) || confirmLeave())
         <p>Browse all tracked articles, including deleted articles and those without a successful scrape.</p>
       </div>
       <div v-if="!sourceKey" class="scraper-actions">
-        <button type="button" class="button button-secondary" :disabled="busy || !loaded || !drafts.length" @click="setAll(true)">Enable all</button>
-        <button type="button" class="button button-secondary" :disabled="busy || !loaded || !drafts.length" @click="setAll(false)">Disable all</button>
+        <button type="button" class="button button-secondary" :disabled="busy || !loaded || !drafts.length || !paused" @click="setAll(true)">Enable all</button>
+        <button type="button" class="button button-secondary" :disabled="busy || !loaded || !drafts.length || paused" @click="setAll(false)">Disable all</button>
         <button type="button" class="button button-primary" :disabled="busy || !loaded || !dirty" @click="saveChanges">{{ saving ? 'Saving…' : 'Save changes' }}</button>
       </div>
     </div>
+    <p v-if="paused" class="scraper-pause-status" role="status">All sources paused{{ paused !== savedPaused ? ' (unsaved)' : '' }}. Individual switch choices are preserved. Use Enable all to resume them.</p>
     <p v-if="dirty" class="admin-save-state" role="status">Unsaved source settings</p>
     <p v-if="feedback" class="admin-success" role="status">{{ feedback }}</p>
     <div v-if="error" class="admin-error" role="alert">
@@ -168,16 +206,16 @@ onBeforeRouteUpdate(to => isScraperTab(to.query.tab) || confirmLeave())
       </div>
       <p v-if="!drafts.length && !data.unassignedCount">No sources or tracked articles yet.</p>
       <ul v-else class="article-sources">
-        <li v-for="source in drafts" :key="source.id" class="admin-card">
+        <li v-for="source in drafts" :key="source.id" class="admin-card" :class="{ 'scraper-source-paused': paused }">
           <div class="scraper-source-heading">
             <h3><NuxtLink :to="{ query: { tab: 'scraper', source: source.id } }">{{ source.name }}</NuxtLink></h3>
             <label class="scraper-switch">
-              <input v-model="source.active" type="checkbox" role="switch" :disabled="busy" :aria-label="`Enabled for scraping: ${source.name}`" @change="feedback = ''">
+              <input v-model="source.active" type="checkbox" role="switch" :disabled="busy || paused" :aria-label="`Enabled for scraping: ${source.name}`" @change="feedback = ''">
               <span>Enabled for scraping</span>
             </label>
           </div>
           <a :href="source.indexUrl" target="_blank" rel="noopener noreferrer" class="article-url">{{ source.indexUrl }}<span class="sr-only"> (opens in a new tab)</span></a>
-          <p>{{ source.active ? 'Active' : 'Inactive' }}{{ source.active !== source.expectedActive ? ' (unsaved)' : '' }} · {{ source.articleCount }} {{ source.articleCount === 1 ? 'article' : 'articles' }}</p>
+          <p>{{ paused ? 'Paused' : source.active ? 'Active' : 'Inactive' }}{{ (paused ? false : source.active) !== source.expectedActive ? ' (unsaved)' : '' }} · {{ source.articleCount }} {{ source.articleCount === 1 ? 'article' : 'articles' }}</p>
         </li>
         <li v-if="data.unassignedCount" class="admin-card">
           <h3><NuxtLink :to="{ query: { tab: 'scraper', source: 'unassigned' } }">Unassigned articles</NuxtLink></h3>
@@ -201,6 +239,11 @@ onBeforeRouteUpdate(to => isScraperTab(to.query.tab) || confirmLeave())
 .scraper-switch input:checked::after { transform: translateX(18px); }
 .scraper-switch input:focus-visible { outline: 3px solid var(--green-700); outline-offset: 3px; }
 .scraper-switch input:disabled { opacity: .6; cursor: wait; }
+.scraper-pause-status { padding: 14px; border-radius: 8px; background: #edf0ee; color: #35433a; }
+.scraper-source-paused { background: #edf0ee; border-color: #b9c2bc; }
+.scraper-source-paused h3 a, .scraper-source-paused .article-url { color: #58645c; }
+.scraper-source-paused .scraper-switch input:checked { background: #68736c; }
+.scraper-source-paused .scraper-switch input { cursor: not-allowed; }
 .article-sources { display: grid; gap: 16px; padding: 0; list-style: none; }
 .article-sources h3 { margin-bottom: 8px; }
 .article-sources p { margin-bottom: 0; }

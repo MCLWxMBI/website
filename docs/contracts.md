@@ -412,3 +412,7 @@ opportunity contract is unchanged. Shared types are in `shared/types/admin-scrap
 Existing-row upserts to `PUT /api/admin/indexes` must also include a boolean
 `expectedActive` alongside `id`. The editor sends its last loaded flag; stale
 flags return `409` and roll back the batch. New rows omit `expectedActive`.
+
+The Scraper master pause is a browser-side draft mode. Saving it sends effective
+`active: false` flags while preserving individual switch choices locally. Resume
+sends those retained choices. The API and schema contain no separate global flag.
