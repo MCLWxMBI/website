@@ -10,7 +10,7 @@ Migration `0003_shared-scraper-schema` adds opportunities, article history,
 website features, validation functions, and deletion triggers. Existing users,
 static pages, and website-index records are preserved. The public catalogue and
 detail pages read opportunities and website features from PostgreSQL. Opportunity
-editing remains deferred; administrators can browse tracked articles.
+creation is available behind the admin panel; editing remains deferred.
 
 Migration `0004_deadline-precision` adds month-only deadlines without changing
 existing timestamps. Existing rows and inserts that omit precision default to
@@ -181,6 +181,22 @@ marker as part of an ordinary upsert. Direct inserts create a null-hash history
 placeholder; only a successful scraper save supplies a tracked extraction hash.
 Use consistent history-first lock ordering, and retry transactions that PostgreSQL
 aborts for a deadlock or serialization failure.
+
+## Manual administrator publication
+
+The Opportunities admin area publishes manual listings using the same schema
+and history-first locking protocol after locking the selected source. The
+organisation autocomplete selects an existing Indexes record or creates a new
+one with its name and HTTPS index URL, scraping disabled, and empty notes.
+History is linked to that source; conflicting known associations are rejected.
+New history rows have a null scrape hash and current UTC upload date. Existing
+hashes and upload dates are preserved, and the history title is refreshed.
+Manual publication never clears deletion markers or overwrites an existing
+opportunity or website features. Website associations are resolved internally,
+using a source's single existing association or a stable internal website with
+empty features. Source, website, history, and opportunity changes commit or roll
+back together. The external scraper may update that canonical URL using
+its normal protocol. See the admin creation contract in [contracts.md](contracts.md).
 
 ## Deletion and deliberate reimport
 

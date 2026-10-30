@@ -9,12 +9,7 @@ protocol described in [Scraper database integration](scraper-database.md).
 
 ## Opportunity administration
 
-Add opportunity management to the administrator panel using the existing
-persistence schema. The editor must provide a dedicated **Invite-only** toggle.
-Enabling it
-adds the canonical `Invite-only` tag and disabling it removes that tag, without
-requiring the administrator to type its value.
-
-The editor must separately let administrators create, assign, and remove other
-free-form tags. It must trim tag text, reject empty values, collapse
-case-insensitive duplicates, and send `null` when no tags remain.
+Manual creation, preview, platform selection/creation, the dedicated Invite-only
+toggle, and free-form tags are available in the Opportunities admin area.
+Editing/deleting published opportunities, persisted unpublished drafts, and
+Polygon/MultiPolygon authoring remain deferred.

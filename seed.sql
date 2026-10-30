@@ -52,3 +52,13 @@ WITH seed (id, name, index_url, active, notes) AS (
   RETURNING id
 )
 SELECT id, name, index_url, active, notes FROM seed ORDER BY id;
+
+-- Explicit fixture IDs must not collide with later administrator-created sources.
+SELECT setval(
+  pg_get_serial_sequence('public.website_indexes', 'id'),
+  GREATEST(
+    (SELECT COALESCE(MAX(id), 0) FROM public.website_indexes),
+    nextval(pg_get_serial_sequence('public.website_indexes', 'id'))
+  ),
+  TRUE
+);

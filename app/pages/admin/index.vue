@@ -5,10 +5,10 @@ import AdminScraper from '~/components/AdminScraper.vue'
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useSeoMeta({ title: 'Administration' })
 const route = useRoute()
-const tabs = ['pages', 'indexes', 'scraper'] as const
+const tabs = ['pages', 'indexes', 'scraper', 'opportunities'] as const
 type AdminTab = typeof tabs[number]
 const selected = computed<AdminTab>(() => ['submissions', 'articles'].includes(route.query.tab as string) ? 'scraper' : tabs.includes(route.query.tab as AdminTab) ? route.query.tab as AdminTab : 'pages')
-const tabLabels: Record<AdminTab, string> = { pages: 'Pages', indexes: 'Indexes', scraper: 'Scraper' }
+const tabLabels: Record<AdminTab, string> = { pages: 'Pages', indexes: 'Indexes', scraper: 'Scraper', opportunities: 'Opportunities' }
 const pages: { title: string; path: string; editPath: string; description: string }[] = [
   { title: 'About', path: '/about', editPath: '/admin/pages/about', description: 'About ECHO, the MCLE initiative, and frequently asked questions.' },
   { title: 'Resources', path: '/resources', editPath: '/admin/pages/resources', description: 'Guidance for participating in public consultations.' }
@@ -37,6 +37,17 @@ const pages: { title: string; path: string; editPath: string; description: strin
     </section>
     <section id="panel-indexes" :hidden="selected !== 'indexes'" aria-labelledby="heading-indexes">
       <AdminWebsiteIndexes />
+    </section>
+    <section v-if="selected === 'opportunities'" id="panel-opportunities" aria-labelledby="heading-opportunities">
+      <h2 id="heading-opportunities">Opportunities</h2>
+      <div class="admin-card">
+        <h3>Add a consultation listing</h3>
+        <p>Create a listing, review its preview, and publish it to the public catalogue.</p>
+        <div class="admin-card-actions">
+          <NuxtLink to="/admin/opportunities/new" class="button button-primary">Create opportunity</NuxtLink>
+          <NuxtLink to="/">View public catalogue</NuxtLink>
+        </div>
+      </div>
     </section>
     <section v-if="selected === 'scraper'" id="panel-scraper" aria-labelledby="heading-scraper">
       <AdminScraper />

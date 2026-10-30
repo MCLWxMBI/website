@@ -226,14 +226,14 @@ current username, and Sign out when authenticated. Preserve the public design
 tokens, visible keyboard focus, and spacious cards. The login form has labelled
 username/password fields, autocomplete, pending feedback, and announced errors.
 
-The protected `/admin` route has Pages, Indexes, and Scraper sections. Pages
+The protected `/admin` route has Pages, Indexes, Scraper, and Opportunities sections. Pages
 lists About and Resources with public view and edit links. Scraper groups tracked
 articles by source, then shows articles by newest upload date with title search
 and pagination. Disable all stages a master pause and greys source cards without
 moving their switches. Enable all resumes the retained individual selections.
 Both actions require Save changes. A browser-local backup supports restoring previous choices.
 Selection is stored in
-`?tab=pages|indexes|scraper`, defaulting to Pages. Section links use native
+`?tab=pages|indexes|scraper|opportunities`, defaulting to Pages. Section links use native
 link keyboard behavior without custom arrow-key controls.
 
 Indexes uses responsive form cards for editing names, HTTPS URLs, active
@@ -242,6 +242,14 @@ records for deletion, with an undo action available until saving. One **Save all
 changes** action locks the form briefly and commits the complete batch. Errors
 leave local edits intact, while successful changes become visible on the public
 Indexes page immediately.
+
+Opportunities links to `/admin/opportunities/new`, a protected plain-text listing
+form with an in-page preview and explicit publication. Optional map input is a
+label and point coordinates. Publishing organisation is an editable autocomplete
+showing source names and index URLs, including inactive sources. New names
+require an index URL; publication creates a disabled source atomically with the
+listing. The backend resolves website features and source links. No platform
+identifier is entered by the administrator.
 
 The protected `/admin/pages/[slug]` editor uses Jodit for familiar rich-text
 editing and application controls for ECHO-specific sections, FAQ entries, lists,
