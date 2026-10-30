@@ -7,10 +7,11 @@ import type {
 
 const MAX_BIGINT_ID = BigInt('9223372036854775807')
 const REQUEST_KEYS = new Set(['upserts', 'deleteIds'])
-const UPSERT_KEYS = new Set(['id', 'name', 'indexUrl', 'active', 'notes'])
+const UPSERT_KEYS = new Set(['id', 'name', 'indexUrl', 'active', 'notes', 'expectedActive'])
 
 export interface WebsiteIndexMutation {
   id?: bigint
+  expectedActive?: boolean
   name: string
   indexUrl: string
   active: boolean
@@ -73,7 +74,13 @@ function parseUpsert(value: unknown): WebsiteIndexMutation {
     active: value.active,
     notes: typeof value.notes === 'string' && value.notes.trim() ? value.notes.trim() : null
   }
-  if ('id' in value) result.id = parseId(value.id)
+  if ('id' in value) {
+    result.id = parseId(value.id)
+    if (typeof value.expectedActive !== 'boolean') throw new Error('Existing website indexes need an expectedActive boolean.')
+    result.expectedActive = value.expectedActive
+  } else if ('expectedActive' in value) {
+    throw new Error('Only existing website indexes accept expectedActive.')
+  }
   return result
 }
 

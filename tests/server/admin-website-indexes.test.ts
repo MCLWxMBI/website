@@ -40,14 +40,14 @@ describe('admin website index saves', () => {
     const repo = repository()
     await saveAdminWebsiteIndexes({
       upserts: [
-        { id: '2', name: '  Alpha updated  ', indexUrl: ' https://alpha.example/new ', active: false, notes: '  New note  ' },
+        { id: '2', expectedActive: true, name: '  Alpha updated  ', indexUrl: ' https://alpha.example/new ', active: false, notes: '  New note  ' },
         { name: 'New index', indexUrl: 'https://new.example/consultations', active: true, notes: '   ' }
       ],
       deleteIds: ['7']
     }, repo)
 
     expect(repo.applyBatch).toHaveBeenCalledWith([
-      { id: 2n, name: 'Alpha updated', indexUrl: 'https://alpha.example/new', active: false, notes: 'New note' },
+      { id: 2n, expectedActive: true, name: 'Alpha updated', indexUrl: 'https://alpha.example/new', active: false, notes: 'New note' },
       { name: 'New index', indexUrl: 'https://new.example/consultations', active: true, notes: null }
     ], [7n])
     expect(vi.mocked(repo.applyBatch).mock.calls[0]![0][1]).not.toHaveProperty('id')
@@ -59,7 +59,7 @@ describe('admin website index saves', () => {
     [{ upserts: [{ name: 'Name', indexUrl: 'http://example.com', active: true, notes: null }], deleteIds: [] }, 'HTTPS'],
     [{ upserts: [{ name: 'Name', indexUrl: 'https://example.com', active: 'yes', notes: null }], deleteIds: [] }, 'Active'],
     [{ upserts: [{ id: '0', name: 'Name', indexUrl: 'https://example.com', active: true, notes: null }], deleteIds: [] }, 'positive'],
-    [{ upserts: [{ id: '2', name: 'Name', indexUrl: 'https://example.com', active: true, notes: null }], deleteIds: ['2'] }, 'updated and deleted'],
+    [{ upserts: [{ id: '2', expectedActive: true, name: 'Name', indexUrl: 'https://example.com', active: true, notes: null }], deleteIds: ['2'] }, 'updated and deleted'],
     [{ upserts: [], deleteIds: ['2', '2'] }, 'duplicated']
   ])('rejects an invalid request without opening a transaction: %#', async (body, message) => {
     const repo = repository()
@@ -80,5 +80,15 @@ describe('admin website index saves', () => {
     vi.mocked(repo.applyBatch).mockRejectedValue(new Error('database secret'))
     await expect(saveAdminWebsiteIndexes({ upserts: [], deleteIds: [] }, repo))
       .rejects.toMatchObject({ statusCode: 503 })
+  })
+})
+
+describe('website index active concurrency validation', () => {
+  it('requires the loaded active flag when updating existing records', async () => {
+    const repo = repository()
+    await expect(saveAdminWebsiteIndexes({ upserts: [
+      { id: '2', name: 'Alpha', indexUrl: 'https://alpha.example', active: false, notes: null }
+    ], deleteIds: [] }, repo)).rejects.toMatchObject({ statusCode: 400 })
+    expect(repo.applyBatch).not.toHaveBeenCalled()
   })
 })

@@ -10,6 +10,7 @@ export interface ScraperArticleQuery {
 }
 export interface AdminScraperRepository {
   sources(): Promise<AdminScraperSourcesResponse>
+  updateSources(updates: ScraperSourceMutation[]): Promise<AdminScraperSourcesResponse>
   articles(query: ScraperArticleQuery): Promise<AdminScraperArticlesResponse | null>
 }
 
@@ -41,4 +42,39 @@ export async function readAdminScraperArticles(query: Record<string, unknown>, r
   try { result = await repository.articles(parsed) } catch { throw unavailable() }
   if (!result) throw createError({ statusCode: 404, statusMessage: 'Source not found.' })
   return result
+}
+
+export interface ScraperSourceMutation {
+  id: bigint
+  active: boolean
+  expectedActive: boolean
+}
+
+export class ScraperSourceConflictError extends Error { }
+
+export function parseScraperSourceUpdates(body: unknown): ScraperSourceMutation[] {
+  const invalid = () => createError({ statusCode: 400, statusMessage: 'Supply unique source IDs with boolean active and expectedActive values.' })
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => key !== 'updates')
+    || !('updates' in body) || !Array.isArray(body.updates)) throw invalid()
+  const seen = new Set<string>()
+  return body.updates.map((value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)
+      || Object.keys(value).some(key => !['id', 'active', 'expectedActive'].includes(key))
+      || !('id' in value) || typeof value.id !== 'string' || !/^[1-9]\d{0,18}$/.test(value.id)
+      || BigInt(value.id) > MAX_SOURCE_ID || seen.has(value.id)
+      || !('active' in value) || typeof value.active !== 'boolean'
+      || !('expectedActive' in value) || typeof value.expectedActive !== 'boolean') throw invalid()
+    seen.add(value.id)
+    return { id: BigInt(value.id), active: value.active, expectedActive: value.expectedActive }
+  })
+}
+
+export async function saveAdminScraperSources(body: unknown, repository: AdminScraperRepository): Promise<AdminScraperSourcesResponse> {
+  const updates = parseScraperSourceUpdates(body)
+  try { return await repository.updateSources(updates) } catch (error) {
+    if (error instanceof ScraperSourceConflictError) throw createError({
+      statusCode: 409, statusMessage: 'A source changed or was deleted. Reload sources before saving again.'
+    })
+    throw unavailable()
+  }
 }

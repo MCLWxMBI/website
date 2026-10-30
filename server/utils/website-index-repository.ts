@@ -52,10 +52,15 @@ export function createAdminWebsiteIndexRepository(
       return db.transaction(async (tx) => {
         const expectedIds = [...upserts.flatMap(item => item.id === undefined ? [] : [item.id]), ...deleteIds]
         if (expectedIds.length) {
-          const existing = await tx.select({ id: websiteIndexes.id })
+          const existing = await tx.select({ id: websiteIndexes.id, active: websiteIndexes.active })
             .from(websiteIndexes)
             .where(inArray(websiteIndexes.id, expectedIds))
+            .orderBy(asc(websiteIndexes.id)).for('update')
           if (existing.length !== expectedIds.length) throw new WebsiteIndexConflictError()
+          const current = new Map(existing.map(row => [row.id, row.active]))
+          if (upserts.some(item => item.id !== undefined && current.get(item.id) !== item.expectedActive)) {
+            throw new WebsiteIndexConflictError()
+          }
         }
 
         for (const item of upserts) {

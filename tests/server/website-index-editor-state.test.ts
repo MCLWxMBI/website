@@ -31,7 +31,7 @@ describe('website index editor drafts', () => {
 
     expect(buildWebsiteIndexUpdateRequest(drafts, baseline)).toEqual({
       upserts: [
-        { id: '4', name: 'Alpha', indexUrl: 'https://alpha.example', active: false, notes: '' },
+        { id: '4', name: 'Alpha', indexUrl: 'https://alpha.example', active: false, notes: '', expectedActive: true },
         { name: 'Gamma', indexUrl: 'https://gamma.example', active: true, notes: '' }
       ],
       deleteIds: ['8']
