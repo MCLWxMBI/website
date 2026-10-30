@@ -416,3 +416,57 @@ flags return `409` and roll back the batch. New rows omit `expectedActive`.
 The Scraper master pause is a browser-side draft mode. Saving it sends effective
 `active: false` flags while preserving individual switch choices locally. Resume
 sends those retained choices. The API and schema contain no separate global flag.
+
+## Admin opportunity creation
+
+All creation routes require an enabled administrator and inherit private,
+no-store caching. Writes also require the existing CSRF token.
+
+- `GET /api/admin/opportunities/options` returns
+  `{ sources: [{ id: string, name: string, indexUrl: string, active: boolean, websiteTags: string[] }] }`.
+  Sources include inactive records, ordered by name ignoring case then numeric
+  ID. An empty registry returns `{ sources: [] }`; this read creates no records.
+- `POST /api/admin/opportunities` accepts the public opportunity fields except
+  `id`, `website`, and `sourceOrg`. Instead supply `organisation` as either
+  `{ existingId: string }` (positive bigint decimal ID) or
+  `{ newSource: { name: string, indexUrl: string } }`.
+  The server derives the stored publishing organisation from the source record.
+  Optional `location` accepts a label and Point geometry in
+  `[longitude, latitude]` order. Client IDs and storage-only fields are rejected.
+- Successful publication returns `201` with the existing
+  `{ opportunity: OpportunityResponse, websiteTags: string[] }` envelope.
+  Public catalogue and detail response shapes are unchanged.
+- A new organisation requires a trimmed, nonblank plain-text name of at most
+  255 characters and an absolute HTTPS index URL, following Indexes validation.
+  It is created with `active=false` and null notes. Names alone do not link or
+  merge sources. Existing sources are not modified, including inactive ones.
+- Title, paragraphs, and labels must be nonblank plain text. Categories and
+  jurisdiction use shared controlled values. Labels are trimmed and deduplicated
+  ignoring case; `Invite-only` uses canonical spelling. Empty opportunity tags
+  become null. Blank summary is omitted; supplied summary has at most 35 words.
+- The official URL must be HTTPS without credentials. URL parsing normalizes
+  the hostname/default port and removes fragments while retaining path and query.
+  Deadlines follow the existing UTC timestamp or month-only contract; opening
+  cannot exceed the effective deadline. Coordinates must be finite and bounded.
+- Validation returns `400` with `data.fieldErrors`. Duplicate or deleted
+  consultation URLs, missing selected sources, and conflicting existing history
+  source associations return `409`. Duplicate listings also return
+  `data.opportunityId`. Database/configuration failures return generic `503`.
+
+Creation is atomic, locking the selected source then following history-first
+identity locking. It never upserts existing listings or website features.
+History links to the selected or newly created source through
+`article_history.source_index_id`; an existing null association is filled.
+New history uses the current UTC upload date, null hash, and false deletion
+marker. Existing history dates and hashes are preserved; its title is refreshed.
+Deleted history prevents creation. Failed publication rolls back all new records.
+
+The backend reuses a source's single distinct website association from existing
+opportunities joined to history by source URL. With no association or multiple
+associations, it uses the stable internal key `source-index:<source ID>`,
+creating that website with empty features if needed. Existing website features
+are never overwritten. Creation options resolve preview features using the same
+rules without creating records. Browser preview performs no writes.
+
+Shared creation types are in `shared/types/admin-opportunity.ts`. This feature
+adds no schema migration, persisted draft state, or public write endpoint.
