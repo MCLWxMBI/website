@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { connectDatabase } from '../../server/database'
 import {
-  articleHistory, opportunities, staticPages, users, websiteIndexes, websites,
+  articleHistory, opportunities, staticPages, users, websiteIndexes,
   type NewOpportunity
 } from '../../server/database/schema'
 import { createOpportunityRepository } from '../../server/utils/opportunity-repository'
@@ -27,13 +27,14 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
   let connection: ReturnType<typeof connectDatabase>
   let created = false
   let previousMigrations: string | undefined
+  let fixtureSourceId: bigint
   let sequence = 0
 
   function values(overrides: Partial<NewOpportunity> = {}): NewOpportunity {
     const id = `consultation-${++sequence}`
     return {
       id, title: 'Consultation title', fullText: ['First paragraph.', 'Second paragraph.'],
-      sourceUrl: `https://example.gov.au/${id}`, websiteId: 'test-platform',
+      sourceUrl: `https://example.gov.au/${id}`, websiteId: fixtureSourceId,
       sourceOrg: 'Publishing authority', jurisdiction: 'Victoria',
       submissionDeadline: new Date('2026-11-20T00:00:00Z'),
       category: ['Climate change'], ...overrides
@@ -70,7 +71,7 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
       await migrate(connection.db, { migrationsFolder: previousMigrations })
       const [user] = await connection.db.insert(users).values({ username: 'existing-admin', passwordHash: 'test-hash', role: 'admin' }).returning()
       await connection.db.insert(staticPages).values({ slug: 'about', contentHtml: '<h1>Existing page</h1>', updatedBy: user!.id })
-      await connection.db.insert(websiteIndexes).values({ name: 'Existing index', indexUrl: 'https://example.gov.au/' })
+      await connection.client`INSERT INTO website_indexes (name,index_url) VALUES ('Existing index','https://example.gov.au/')`
       if (scenario === 'upgrade-from-scraper' || scenario === 'upgrade-from-deadline-precision') {
         await connection.client`INSERT INTO websites (id, tags) VALUES ('legacy-platform', '{}')`
         // Raw SQL works with the pre-upgrade schema (0003 or 0004).
@@ -84,8 +85,23 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
       }
     }
 
+    if (scenario === 'upgrade-from-scraper' || scenario === 'upgrade-from-deadline-precision') {
+      // Exercise the historical data-preserving upgrades through 0006 first.
+      // 0007 deliberately requires empty opportunity/website tables.
+      const journal = JSON.parse(await readFile('drizzle/meta/_journal.json', 'utf8'))
+      journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= 6)
+      await writeFile(join(previousMigrations!, 'meta/_journal.json'), JSON.stringify(journal))
+      for (const entry of journal.entries) await copyFile(`drizzle/${entry.tag}.sql`, join(previousMigrations!, `${entry.tag}.sql`))
+      await migrate(connection.db, { migrationsFolder: previousMigrations! })
+      const [existing] = await connection.client`SELECT submission_deadline, submission_deadline_precision FROM opportunities WHERE id='existing-opportunity'`
+      expect(new Date(existing!.submission_deadline).toISOString()).toBe('2026-11-20T17:23:45.123Z')
+      expect(existing?.submission_deadline_precision).toBe('datetime')
+      await connection.client`DELETE FROM opportunities`
+      await connection.client`DELETE FROM websites`
+    }
     await migrate(connection.db, { migrationsFolder: './drizzle' })
-    await connection.db.insert(websites).values({ id: 'test-platform', tags: ['Login required', 'Online submission'] })
+    const [fixture] = await connection.db.insert(websiteIndexes).values({ name: 'Test source', indexUrl: 'https://test-platform.gov.au/', tags: ['Login required', 'Online submission'] }).returning()
+    fixtureSourceId = fixture!.id
   })
 
   afterAll(async () => {
@@ -101,22 +117,18 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
   it('records the migration once and preserves the existing schema and data', async () => {
     const tables = await connection.client`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`
     expect(tables.map(row => row.table_name)).toEqual([
-      'article_history', 'opportunities', 'static_pages', 'users', 'website_indexes', 'websites'
+      'article_history', 'opportunities', 'static_pages', 'users', 'website_indexes'
     ])
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(7)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(8)
     await migrate(connection.db, { migrationsFolder: './drizzle' })
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(7)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(8)
     if (scenario !== 'fresh') {
       expect((await connection.db.select().from(users))[0]?.username).toBe('existing-admin')
       expect((await connection.db.select().from(staticPages))[0]?.contentHtml).toBe('<h1>Existing page</h1>')
       expect((await connection.db.select().from(websiteIndexes))[0]?.name).toBe('Existing index')
       if (scenario === 'upgrade-from-scraper' || scenario === 'upgrade-from-deadline-precision') {
-        const [existing] = await connection.db.select().from(opportunities).where(eq(opportunities.id, 'existing-opportunity'))
-        expect(existing?.submissionDeadline.toISOString()).toBe('2026-11-20T17:23:45.123Z')
-        expect(existing?.submissionDeadlinePrecision).toBe('datetime')
-        expect(serializeOpportunity(existing!).submissionDeadline).toBe('2026-11-20T17:23:45.123Z')
         const legacy = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, 'https://example.gov.au/existing-consultation'))
-        expect(legacy[0]).toMatchObject({ uploadDate: null, hash: 'a'.repeat(64), deleted: false })
+        expect(legacy[0]).toMatchObject({ uploadDate: null, hash: 'a'.repeat(64), deleted: true })
         const deleted = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, 'https://example.gov.au/legacy-deleted'))
         expect(deleted[0]).toMatchObject({ uploadDate: null, hash: 'b'.repeat(64), deleted: true })
       }
@@ -127,11 +139,11 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
     const row = await insert()
     const repository = createOpportunityRepository(connection.db)
     expect(await repository.findWebsiteTags(row.websiteId)).toEqual(['Login required', 'Online submission'])
-    expect(await repository.findWebsiteTags('missing')).toBeNull()
+    expect(await repository.findWebsiteTags(999999n)).toBeNull()
     expect(await repository.findById('missing')).toBeNull()
     const stored = await repository.findById(row.id)
     const response = serializeOpportunity(stored!)
-    expect(response.website).toBe('test-platform')
+    expect(response.website).toBe(fixtureSourceId.toString())
     expect(response.startDate).toBeNull()
     expect(response.tags).toBeNull()
     expect(stored?.submissionDeadlinePrecision).toBe('datetime')
@@ -194,11 +206,11 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
   })
 
   it('requires an existing website and prevents deletion of a referenced website', async () => {
-    await rejectsConstraint(connection.db.insert(opportunities).values(values({ websiteId: 'missing' })), '23503')
+    await rejectsConstraint(connection.db.insert(opportunities).values(values({ websiteId: 999999n })), '23503')
     await insert()
-    await rejectsConstraint(connection.db.delete(websites).where(eq(websites.id, 'test-platform')), '23001')
-    await rejectsConstraint(connection.db.insert(websites).values({ id: 'bad-features', tags: [' '] }))
-    await connection.db.insert(websites).values({ id: 'no-features', tags: [] })
+    await rejectsConstraint(connection.db.delete(websiteIndexes).where(eq(websiteIndexes.id, fixtureSourceId)), '23001')
+    await rejectsConstraint(connection.db.insert(websiteIndexes).values({ name: 'Bad features', indexUrl: 'https://bad.gov.au', tags: [' '] }))
+    await connection.db.insert(websiteIndexes).values({ name: 'No features', indexUrl: 'https://empty.gov.au', tags: [] })
   })
 
   it.each([

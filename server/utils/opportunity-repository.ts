@@ -1,6 +1,6 @@
 import { asc, eq } from 'drizzle-orm'
 import { connectDatabase } from '../database'
-import { opportunities, websites } from '../database/schema'
+import { opportunities, websiteIndexes } from '../database/schema'
 import type { OpportunityRepository } from '../services/opportunities'
 
 let connection: ReturnType<typeof connectDatabase> | undefined
@@ -19,8 +19,8 @@ export function createOpportunityRepository(db: ReturnType<typeof connectDatabas
       return db.select().from(opportunities).orderBy(asc(opportunities.submissionDeadline), asc(opportunities.id))
     },
     async findDetailById(id: string) {
-      const [row] = await db.select({ opportunity: opportunities, websiteTags: websites.tags })
-        .from(opportunities).innerJoin(websites, eq(opportunities.websiteId, websites.id))
+      const [row] = await db.select({ opportunity: opportunities, websiteTags: websiteIndexes.tags })
+        .from(opportunities).innerJoin(websiteIndexes, eq(opportunities.websiteId, websiteIndexes.id))
         .where(eq(opportunities.id, id)).limit(1)
       return row ?? null
     },
@@ -28,9 +28,9 @@ export function createOpportunityRepository(db: ReturnType<typeof connectDatabas
       const [row] = await db.select().from(opportunities).where(eq(opportunities.id, id)).limit(1)
       return row ?? null
     },
-    async findWebsiteTags(websiteId: string) {
-      const [row] = await db.select({ tags: websites.tags }).from(websites)
-        .where(eq(websites.id, websiteId)).limit(1)
+    async findWebsiteTags(websiteId: bigint) {
+      const [row] = await db.select({ tags: websiteIndexes.tags }).from(websiteIndexes)
+        .where(eq(websiteIndexes.id, websiteId)).limit(1)
       return row?.tags ?? null
     }
   }

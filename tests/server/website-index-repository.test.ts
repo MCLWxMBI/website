@@ -31,14 +31,15 @@ describe('website index repository', () => {
 describe('admin website index repository', () => {
   it('applies additions, updates, and deletions inside one transaction', async () => {
     const finalRows = [
-      { id: 2n, name: 'Updated', indexUrl: 'https://updated.example', active: false, notes: 'Note' },
-      { id: 10n, name: 'New', indexUrl: 'https://new.example', active: true, notes: null }
+      { id: 2n, name: 'Updated', indexUrl: 'https://updated.example', active: false, notes: 'Note', tags: [] },
+      { id: 10n, name: 'New', indexUrl: 'https://new.example', active: true, notes: null, tags: [] }
     ]
     const lockExisting = vi.fn().mockResolvedValue([{ id: 2n, active: true }, { id: 7n, active: true }])
     const whereExisting = vi.fn(() => ({ orderBy: vi.fn(() => ({ for: lockExisting })) }))
     const orderBy = vi.fn().mockResolvedValue(finalRows)
     const select = vi.fn()
       .mockImplementationOnce(() => ({ from: vi.fn(() => ({ where: whereExisting })) }))
+      .mockImplementationOnce(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue([]) })) })) }))
       .mockImplementationOnce(() => ({ from: vi.fn(() => ({ orderBy })) }))
     const insertValues = vi.fn().mockResolvedValue(undefined)
     const updateWhere = vi.fn().mockResolvedValue(undefined)
@@ -54,18 +55,18 @@ describe('admin website index repository', () => {
     const db = { transaction } as unknown as ReturnType<typeof connectDatabase>['db']
 
     const result = await createAdminWebsiteIndexRepository(db).applyBatch([
-      { id: 2n, expectedActive: true, name: 'Updated', indexUrl: 'https://updated.example', active: false, notes: 'Note' },
-      { name: 'New', indexUrl: 'https://new.example', active: true, notes: null }
+      { id: 2n, expectedActive: true, name: 'Updated', indexUrl: 'https://updated.example', active: false, notes: 'Note', tags: [] },
+      { name: 'New', indexUrl: 'https://new.example', active: true, notes: null, tags: [] }
     ], [7n])
 
     expect(result).toEqual(finalRows)
     expect(transaction).toHaveBeenCalledOnce()
     expect(insertValues).toHaveBeenCalledWith({
-      name: 'New', indexUrl: 'https://new.example', active: true, notes: null
+      name: 'New', indexUrl: 'https://new.example', active: true, notes: null, tags: []
     })
     expect(insertValues.mock.calls[0]![0]).not.toHaveProperty('id')
     expect(updateSet).toHaveBeenCalledWith({
-      name: 'Updated', indexUrl: 'https://updated.example', active: false, notes: 'Note'
+      name: 'Updated', indexUrl: 'https://updated.example', active: false, notes: 'Note', tags: []
     })
     expect(deleteWhere).toHaveBeenCalledOnce()
     expect(orderBy).toHaveBeenCalledOnce()
@@ -79,7 +80,7 @@ describe('admin website index repository', () => {
     const db = { transaction } as unknown as ReturnType<typeof connectDatabase>['db']
 
     await expect(createAdminWebsiteIndexRepository(db).applyBatch([
-      { id: 99n, name: 'Missing', indexUrl: 'https://missing.example', active: true, notes: null }
+      { id: 99n, name: 'Missing', indexUrl: 'https://missing.example', active: true, notes: null, tags: [] }
     ], [])).rejects.toBeInstanceOf(WebsiteIndexConflictError)
     expect(transaction).toHaveBeenCalledOnce()
   })

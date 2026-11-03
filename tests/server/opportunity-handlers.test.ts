@@ -17,7 +17,7 @@ import detail from '../../server/api/opportunities/[id].get'
 
 const row: OpportunityRecord = {
   id: 'another-consultation', title: 'A database consultation', fullText: ['Full text.'],
-  sourceUrl: 'https://example.gov.au/another-consultation', websiteId: 'new-platform',
+  sourceUrl: 'https://example.gov.au/another-consultation', websiteId: 42n,
   sourceOrg: 'New authority', jurisdiction: 'Commonwealth', startDate: null,
   submissionDeadline: new Date('2026-11-01T00:00:00Z'), submissionDeadlinePrecision: 'month',
   category: ['Climate change'], tags: null, summary: null, location: null
@@ -34,7 +34,7 @@ describe('public opportunity APIs', () => {
   it('lists arbitrary database records without caching or exposing storage details', async () => {
     const result = await list(event)
     expect(result).toHaveLength(1)
-    expect(result[0]).toMatchObject({ id: row.id, website: 'new-platform', submissionDeadline: '2026-11' })
+    expect(result[0]).toMatchObject({ id: row.id, website: '42', submissionDeadline: '2026-11' })
     for (const field of ['websiteId', 'submissionDeadlinePrecision', 'hash', 'deleted', 'status']) {
       expect(result[0]).not.toHaveProperty(field)
     }

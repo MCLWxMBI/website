@@ -41,7 +41,7 @@ Migration `0006_article-history-source-index` adds nullable
 `article_history.source_index_id` (`sourceIndexId` in Drizzle), referencing the
 numeric `website_indexes.id`. Apply migrations before updating external writers.
 Supply the ID of the index that discovered the article when creating its history
-placeholder. This is separate from the platform's text `website_id`.
+placeholder. Opportunity `website_id` now references this same numeric registry.
 
 A null source ID means unknown/unassigned; the admin browser lists those records
 under **Unassigned articles**. Existing writers that omit the field continue to
@@ -71,23 +71,22 @@ deletion triggers need no change and preserve the source association.
 
 ## Website identity
 
-Every opportunity writer must provide `website_id`, a stable text key referencing
-`websites.id`, such as `engage-victoria`. Create the website metadata before
-inserting opportunities. Its `tags text[]` holds feature labels such as
-`Login required` and `Online submission`; use an empty array when there are no
-features. Values must be trimmed, nonblank, plain text, and unique ignoring case.
-Website deletion is restricted while opportunities reference it.
+Every opportunity writer must provide `website_id`, a bigint referencing an
+existing `website_indexes.id`. The source registry also owns `tags text[]` for
+website features, defaulting to an empty array. Labels must be trimmed, nonblank,
+plain text, and unique ignoring case. Opportunity-specific tags remain separate.
 
-This is an extension to the supplied scraper schema. The external scraper must
-add this field to its extraction-to-persistence mapping and coordinate website
-metadata with the website owner before writing to the migrated database. This
-repository does not contain that scraper implementation.
+Migration `0007_unify-website-indexes` removes `websites` and its text keys.
+The migration requires empty opportunity and website tables and preserves source
+records and history. API responses expose the numeric ID as the decimal string
+`website`. Sources cannot be deleted while opportunities reference them.
 
-Website keys identify platforms, not publishing authorities or jurisdictions.
-`website_indexes` is a separate registry with numeric IDs for scraper entry
-points; do not copy those IDs into `website_id`. API responses expose the text
-key as `website`. The repository supports feature lookup by that key without
-assuming it is one of the two development fixture websites.
+Writers should supply the originating source ID in both
+`opportunities.website_id` and `article_history.source_index_id` when creating
+known-source records. Preserve known history associations, hashes, dates, and
+deletion markers using the existing transaction protocol. Source feature tags
+can be managed in the website's Indexes editor. External scraper implementation
+and deployment are outside this repository change.
 
 ## Opportunity identity and writes
 
@@ -137,7 +136,7 @@ fields. The serializer converts month rows back to `YYYY-MM`. Other scraper
 implementations must perform the same mapping; this repository does not contain
 the external scraper.
 
-For example, within the history-locking transaction below, with website metadata
+For example, within the history-locking transaction below, with source metadata
 already present (use bound parameters for scraped values):
 
 ~~~sql
@@ -168,7 +167,7 @@ those fields must include them in both the insert and conflict update.
 
 For scraper writes, the caller owns the transaction:
 
-1. Ensure the website metadata exists.
+1. Ensure the referenced source registry record exists.
 2. Insert an `article_history` placeholder for the canonical source URL if absent,
    then lock its row with `SELECT ... FOR UPDATE`. If `deleted` is true, skip it.
 3. Upsert the opportunity by `source_url`, retaining the existing opportunity ID.
@@ -192,10 +191,9 @@ History is linked to that source; conflicting known associations are rejected.
 New history rows have a null scrape hash and current UTC upload date. Existing
 hashes and upload dates are preserved, and the history title is refreshed.
 Manual publication never clears deletion markers or overwrites an existing
-opportunity or website features. Website associations are resolved internally,
-using a source's single existing association or a stable internal website with
-empty features. Source, website, history, and opportunity changes commit or roll
-back together. The external scraper may update that canonical URL using
+opportunity or website features. Opportunity website IDs reference the selected
+source directly, and feature tags come from that source. New sources default to
+empty tags. Source, history, and opportunity changes commit or roll back together. The external scraper may update that canonical URL using
 its normal protocol. See the admin creation contract in [contracts.md](contracts.md).
 
 ## Deletion and deliberate reimport
@@ -241,13 +239,15 @@ API reads still use `DATABASE_URL`, including in production.
 website features. It creates matching `article_history` rows linked by the same
 unique placeholder URL, with a lowercase SHA-256 hash of each normalized seed
 row's JSONB representation (timestamps normalized to UTC, excluding upload-date
-and source-index metadata). Every fixture includes an explicit example upload
+and source-index ID/URL metadata). Every fixture includes an explicit example upload
 date. Reruns fill missing dates and source associations but preserve known values
-and deletion markers. The seed resolves existing Engage Victoria/DCCEEW registry
-entries by index URL; missing or duplicate matches leave the source unassigned.
+and deletion markers. The seed reuses Engage Victoria/DCCEEW registry entries by index URL, preserving
+their names, flags, and notes. Missing fixture sources are created; duplicate
+matching URLs or conflicting known history source links abort the transaction.
+Their feature arrays are updated on each seed run.
 These are synthetic fixtures, not claims that a network scrape occurred.
 
 The seed follows history-first locking, preserves existing IDs on URL conflicts,
 and skips deletion markers without clearing them. Unrelated rows remain intact.
-It runs as one transaction and does not insert users, static pages, or the
-separate website-index registry.
+It runs as one transaction and does not insert users or static pages. The root
+registry seed remains separate and preserves existing feature tags on reruns.

@@ -9,8 +9,8 @@ import {
 } from '../../app/utils/website-index-editor-state'
 
 const stored: AdminWebsiteIndex[] = [
-  { id: '4', name: 'Alpha', indexUrl: 'https://alpha.example', active: true, notes: null },
-  { id: '8', name: 'Beta', indexUrl: 'https://beta.example', active: false, notes: 'Review' }
+  { id: '4', name: 'Alpha', indexUrl: 'https://alpha.example', active: true, notes: null, tags: [] },
+  { id: '8', name: 'Beta', indexUrl: 'https://beta.example', active: false, notes: 'Review', tags: [] }
 ]
 
 describe('website index editor drafts', () => {
@@ -18,7 +18,7 @@ describe('website index editor drafts', () => {
     const drafts = websiteIndexesToDrafts(stored)
     expect(snapshotWebsiteIndexDrafts(drafts)).toBe(snapshotWebsiteIndexDrafts(websiteIndexesToDrafts(stored)))
     expect(createWebsiteIndexDraft('new-1')).toEqual({
-      key: 'new-1', name: '', indexUrl: '', active: true, notes: '', deleted: false
+      key: 'new-1', name: '', indexUrl: '', active: true, notes: '', tags: [], deleted: false
     })
   })
 
@@ -31,8 +31,8 @@ describe('website index editor drafts', () => {
 
     expect(buildWebsiteIndexUpdateRequest(drafts, baseline)).toEqual({
       upserts: [
-        { id: '4', name: 'Alpha', indexUrl: 'https://alpha.example', active: false, notes: '', expectedActive: true },
-        { name: 'Gamma', indexUrl: 'https://gamma.example', active: true, notes: '' }
+        { id: '4', name: 'Alpha', indexUrl: 'https://alpha.example', active: false, notes: '', tags: [], expectedActive: true },
+        { name: 'Gamma', indexUrl: 'https://gamma.example', active: true, notes: '', tags: [] }
       ],
       deleteIds: ['8']
     })

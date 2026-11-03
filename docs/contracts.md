@@ -98,11 +98,12 @@ locally and remains available with a table-maintenance message. An empty array
 uses the same public maintenance state.
 
 Authenticated `GET /api/admin/indexes` returns the same fields plus internal
-notes:
+notes and website feature tags:
 
 ~~~ts
 interface AdminWebsiteIndex extends WebsiteIndexResponse {
   notes: string | null
+  tags: string[]
 }
 ~~~
 
@@ -116,6 +117,8 @@ interface UpdateWebsiteIndexesRequest {
     indexUrl: string
     active: boolean
     notes: string | null
+    tags?: string[]
+    expectedActive?: boolean // Required for an existing ID.
   }>
   deleteIds: string[]
 }
@@ -145,7 +148,7 @@ interface OpportunityDetailResponse {
 }
 ~~~
 
-Website features come from the referenced `websites` row, not a fixed platform
+Website features come directly from the referenced `website_indexes.tags`, not a fixed platform
 list. A missing opportunity returns 404; missing database configuration, storage
 failures, or serialization failures return a generic 503. Both endpoints send
 `Cache-Control: no-store`. Article history and database credentials are never
@@ -183,7 +186,7 @@ interface OpportunityResponse {
 | **title** | Non-empty human-readable consultation title. |
 | **fullText** | Ordered array of one or more non-empty plain-text paragraphs. HTML must not be returned in this field. |
 | **sourceUrl** | Absolute HTTPS URL for the official consultation page. |
-| **website** | Stable source-platform key referencing `websites.id`, stored as `opportunities.website_id`. Used to retrieve website-feature tags; separate from the publishing organisation and opportunity tags. |
+| **website** | Decimal string of the bigint `website_indexes.id` referenced by `opportunities.website_id`. Used to retrieve source feature tags. Serialized as a string to preserve bigint precision. |
 | **sourceOrg** | Non-empty name of the publishing organisation running the consultation. Used as the Authority filter value; source websites are separate. The frontend derives unique, alphabetically sorted options from the complete opportunity collection and matches exact names. |
 | **jurisdiction** | One of the supported jurisdiction values. Do not return an unrecognised free-text value. |
 | **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than the effective `submissionDeadline` instant (the first day at midnight UTC for month-only deadlines). |
@@ -247,29 +250,27 @@ time locally and periodically resynchronises it with this endpoint.
 
 ## Website details database schema
 
-Website details are stored as a website identifier mapped to an array of
-display-ready tags. The expected PostgreSQL/Supabase table is:
+Feature tags are stored directly on the source registry:
 
 ~~~sql
-create table websites (
-  id text primary key,
-  tags text[] not null
-);
+-- Relevant columns after migration 0007:
+-- website_indexes.id bigint primary key
+-- website_indexes.tags text[] not null default '{}'
+-- opportunities.website_id bigint not null references website_indexes(id)
 ~~~
 
-- `id` is the stable website key referenced by opportunities, such as
-  `engage-victoria` or `dcceew-consult`.
-- `tags` contains the website features shown on the opportunity detail page,
-  such as `Login required` or `Online submission`.
-- Tags must be non-empty plain-text values. HTML must not be stored in the
-  array.
+Tags describe website features such as `Login required` and `Online submission`.
+Empty arrays are valid. Labels must be trimmed, nonblank, plain text, and unique
+ignoring case. The Indexes editor manages these tags; omitted tags in metadata
+updates preserve the existing array. New sources default to an empty array.
+Sources referenced by opportunities cannot be deleted; admin deletion returns
+`409` with `data.reason = 'source_in_use'`. Sources referenced only by history
+remain deletable, with history source IDs set to null.
 
-The table and the required `opportunities.website_id` foreign key are included
-in migration `0003_shared-scraper-schema`. A website's tags may be an empty
-array when it has no features to display; existing values must be trimmed and
-unique using case-insensitive comparison. Referenced websites cannot be deleted.
-`website_indexes` remains the independent numeric-ID registry of scraper entry
-points; its IDs are not website-feature keys.
+Migration `0007_unify-website-indexes` requires empty `opportunities` and
+`websites` tables, verifies that condition under write locks, converts the
+foreign key, and removes `websites`. A failed empty-table check rolls back the
+migration. Source settings, history records, and deletion triggers are preserved.
 
 Persistence uses snake_case columns, while the response uses camelCase, including
 `website_id` → `website`. Exact timestamps are serialized in UTC ending in `Z`.
@@ -288,7 +289,7 @@ requirements.
 The backend retrieves the tags for one website using the equivalent of:
 
 ~~~sql
-select tags from websites where id = $1;
+select tags from website_indexes where id = $1;
 ~~~
 
 ## Geographic location
@@ -341,7 +342,7 @@ interface OpportunityLocation {
     "Sustainability Victoria is seeking input on stewardship obligations and recovery targets."
   ],
   "sourceUrl": "https://engage.vic.gov.au/",
-  "website": "engage-victoria",
+  "website": "25",
   "sourceOrg": "Sustainability Victoria",
   "jurisdiction": "Victoria",
   "startDate": "2026-08-17T00:00:00Z",
@@ -461,12 +462,10 @@ New history uses the current UTC upload date, null hash, and false deletion
 marker. Existing history dates and hashes are preserved; its title is refreshed.
 Deleted history prevents creation. Failed publication rolls back all new records.
 
-The backend reuses a source's single distinct website association from existing
-opportunities joined to history by source URL. With no association or multiple
-associations, it uses the stable internal key `source-index:<source ID>`,
-creating that website with empty features if needed. Existing website features
-are never overwritten. Creation options resolve preview features using the same
-rules without creating records. Browser preview performs no writes.
+The backend stores the selected source ID directly in `opportunities.website_id`.
+Creation options and public detail responses read `website_indexes.tags` directly.
+New sources have empty feature tags; existing tags are never changed by opportunity
+publication. Browser preview performs no writes.
 
 Shared creation types are in `shared/types/admin-opportunity.ts`. This feature
-adds no schema migration, persisted draft state, or public write endpoint.
+requires migration 0007 and adds no persisted draft state or public write endpoint.

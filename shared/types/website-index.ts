@@ -9,6 +9,7 @@ export type WebsiteIndexesResponse = WebsiteIndexResponse[]
 
 export interface AdminWebsiteIndex extends WebsiteIndexResponse {
   notes: string | null
+  tags: string[]
 }
 
 export type AdminWebsiteIndexesResponse = AdminWebsiteIndex[]
@@ -21,6 +22,7 @@ export interface WebsiteIndexUpsertRequest {
   indexUrl: string
   active: boolean
   notes: string | null
+  tags?: string[]
 }
 
 export interface UpdateWebsiteIndexesRequest {

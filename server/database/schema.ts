@@ -40,15 +40,10 @@ export const websiteIndexes = pgTable('website_indexes', {
   name: varchar('name', { length: 255 }).notNull(),
   indexUrl: text('index_url').notNull(),
   active: boolean('active').notNull().default(true),
-  notes: text('notes')
-})
-
-export const websites = pgTable('websites', {
-  id: text('id').primaryKey(),
-  tags: text('tags').array().notNull()
+  notes: text('notes'),
+  tags: text('tags').array().notNull().default(sql`'{}'::text[]`)
 }, table => [
-  check('websites_id_nonempty', sql`${table.id} ~ '[^[:space:]]'`),
-  check('websites_tags_valid', sql`cardinality(${table.tags}) = 0 OR public.opportunity_text_array_valid(${table.tags}, TRUE)`)
+  check('website_indexes_tags_valid', sql`cardinality(${table.tags}) = 0 OR public.opportunity_text_array_valid(${table.tags}, TRUE)`)
 ])
 
 export const opportunities = pgTable('opportunities', {
@@ -56,7 +51,7 @@ export const opportunities = pgTable('opportunities', {
   title: text('title').notNull(),
   fullText: text('full_text').array().notNull(),
   sourceUrl: text('source_url').notNull().unique(),
-  websiteId: text('website_id').notNull().references(() => websites.id, { onDelete: 'restrict' }),
+  websiteId: bigint('website_id', { mode: 'bigint' }).notNull().references(() => websiteIndexes.id, { onDelete: 'restrict' }),
   sourceOrg: text('source_org').notNull(),
   jurisdiction: text('jurisdiction').$type<Jurisdiction>().notNull(),
   startDate: timestamp('start_date', { withTimezone: true }),
@@ -67,6 +62,7 @@ export const opportunities = pgTable('opportunities', {
   summary: text('summary'),
   location: jsonb('location').$type<OpportunityLocation>()
 }, table => [
+  index('opportunities_website_id_idx').on(table.websiteId),
   check('opportunities_id_nonempty', sql`${table.id} ~ '[^[:space:]]'`),
   check('opportunities_title_nonempty', sql`${table.title} ~ '[^[:space:]]'`),
   check('opportunities_full_text_valid', sql`public.opportunity_text_array_valid(${table.fullText})`),
@@ -119,8 +115,6 @@ export type StaticPage = typeof staticPages.$inferSelect
 export type NewStaticPage = typeof staticPages.$inferInsert
 export type WebsiteIndex = typeof websiteIndexes.$inferSelect
 export type NewWebsiteIndex = typeof websiteIndexes.$inferInsert
-export type Website = typeof websites.$inferSelect
-export type NewWebsite = typeof websites.$inferInsert
 export type OpportunityRecord = typeof opportunities.$inferSelect
 export type NewOpportunity = typeof opportunities.$inferInsert
 export type ArticleHistory = typeof articleHistory.$inferSelect

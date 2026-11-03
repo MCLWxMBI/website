@@ -1,4 +1,5 @@
 import { createError } from 'h3'
+import { normalizeOpportunityLabels } from '../../shared/utils/admin-opportunity'
 import type { WebsiteIndex } from '../database/schema'
 import type {
   AdminWebsiteIndex,
@@ -7,7 +8,7 @@ import type {
 
 const MAX_BIGINT_ID = BigInt('9223372036854775807')
 const REQUEST_KEYS = new Set(['upserts', 'deleteIds'])
-const UPSERT_KEYS = new Set(['id', 'name', 'indexUrl', 'active', 'notes', 'expectedActive'])
+const UPSERT_KEYS = new Set(['id', 'name', 'indexUrl', 'active', 'notes', 'expectedActive', 'tags'])
 
 export interface WebsiteIndexMutation {
   id?: bigint
@@ -16,6 +17,7 @@ export interface WebsiteIndexMutation {
   indexUrl: string
   active: boolean
   notes: string | null
+  tags?: string[]
 }
 
 export interface AdminWebsiteIndexRepository {
@@ -24,6 +26,7 @@ export interface AdminWebsiteIndexRepository {
 }
 
 export class WebsiteIndexConflictError extends Error {}
+export class WebsiteIndexInUseError extends Error {}
 
 const unavailable = () => createError({
   statusCode: 503,
@@ -74,6 +77,7 @@ function parseUpsert(value: unknown): WebsiteIndexMutation {
     active: value.active,
     notes: typeof value.notes === 'string' && value.notes.trim() ? value.notes.trim() : null
   }
+  if ('tags' in value) result.tags = normalizeOpportunityLabels(value.tags, 'tags')
   if ('id' in value) {
     result.id = parseId(value.id)
     if (typeof value.expectedActive !== 'boolean') throw new Error('Existing website indexes need an expectedActive boolean.')
@@ -108,7 +112,8 @@ function response(rows: WebsiteIndex[]): AdminWebsiteIndexesResponse {
     name: row.name,
     indexUrl: row.indexUrl,
     active: row.active,
-    notes: row.notes
+    notes: row.notes,
+    tags: row.tags
   }))
 }
 
@@ -137,6 +142,9 @@ export async function saveAdminWebsiteIndexes(
   try {
     return response(await repository.applyBatch(request.upserts, request.deleteIds))
   } catch (error) {
+    if (error instanceof WebsiteIndexInUseError) {
+      throw createError({ statusCode: 409, statusMessage: 'This source has published opportunities. Disable scraping instead of deleting it.', data: { reason: 'source_in_use' } })
+    }
     if (error instanceof WebsiteIndexConflictError) {
       throw createError({
         statusCode: 409,

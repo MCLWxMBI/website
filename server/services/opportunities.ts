@@ -10,7 +10,7 @@ export function serializeOpportunity(row: OpportunityRecord): OpportunityRespons
     title: row.title,
     fullText: row.fullText,
     sourceUrl: row.sourceUrl,
-    website: row.websiteId,
+    website: row.websiteId.toString(),
     sourceOrg: row.sourceOrg,
     jurisdiction: row.jurisdiction,
     startDate: row.startDate?.toISOString() ?? null,

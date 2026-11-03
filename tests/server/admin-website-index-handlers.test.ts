@@ -15,7 +15,7 @@ import readIndexes from '../../server/api/admin/indexes.get'
 import saveIndexes from '../../server/api/admin/indexes.put'
 
 const event = {} as Parameters<typeof readIndexes>[0]
-const row = { id: 1n, name: 'Example', indexUrl: 'https://example.com', active: true, notes: 'Internal' }
+const row = { id: 1n, name: 'Example', indexUrl: 'https://example.com', active: true, notes: 'Internal', tags: [] }
 
 beforeEach(() => {
   requireAdmin.mockResolvedValue({ user: { id: 4, username: 'admin', role: 'admin' } })
@@ -27,7 +27,7 @@ beforeEach(() => {
 describe('admin website index handlers', () => {
   it('authorizes reads and returns notes', async () => {
     await expect(readIndexes(event)).resolves.toEqual([
-      { id: '1', name: 'Example', indexUrl: 'https://example.com', active: true, notes: 'Internal' }
+      { id: '1', name: 'Example', indexUrl: 'https://example.com', active: true, notes: 'Internal', tags: [] }
     ])
     expect(requireAdmin).toHaveBeenCalledWith(event)
   })

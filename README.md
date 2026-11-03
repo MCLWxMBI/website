@@ -83,7 +83,7 @@ database selected at the prompt:
 npm run db:migrate
 ```
 
-This creates `users`, `static_pages`, `website_indexes`, `websites`,
+This creates `users`, `static_pages`, `website_indexes`,
 `opportunities`, and `article_history`, plus the `user_role` enum and opportunity
 validation/deletion functions and triggers. It records the applied migrations
 so rerunning the command does not recreate the tables.
@@ -99,6 +99,16 @@ npm run db:migrate
 Keep existing migration SQL and snapshots unchanged. Opportunity validation
 functions and deletion triggers are maintained explicitly in new migration SQL;
 review their ordering as well as the generated tables and constraints.
+
+### Consolidate website sources
+
+Migration `0007_unify-website-indexes` replaces the separate `websites` table
+with feature tags on `website_indexes`. It requires both `opportunities` and
+`websites` to be empty and aborts atomically if either contains rows. It
+preserves source settings and all article history. Apply it with
+`npm run db:migrate`, selecting the intended environment, before starting the
+matching website release. Existing text platform keys become numeric source IDs
+for subsequent inserts. This repository does not deploy external scraper changes.
 
 ### Seed the development catalogue
 
@@ -116,9 +126,11 @@ requires the existing migrations and never runs automatically on application
 startup. Its fixtures live in `scripts/seed.sql`; the root `seed.sql` remains the
 separate website-index registry seed.
 
-Seeding writes 12 synthetic opportunities, two website-feature records, and
+Seeding writes 12 synthetic opportunities, feature tags on two source records, and
 matching scrape histories. Placeholder consultation URLs are unique beneath
-the Engage Victoria and DCCEEW indexes. Reruns update matching fixtures, preserve
+the Engage Victoria and DCCEEW indexes. Missing fixture sources are created;
+existing names, scraping flags, and notes are preserved. Duplicate matching
+index URLs abort the seed. Reruns update matching fixtures, preserve
 unrelated records and stable IDs, and skip URLs marked deleted. The entire seed
 rolls back if a conflicting ID belongs to another source URL.
 
@@ -126,11 +138,11 @@ The public catalogue and detail pages read PostgreSQL through
 `GET /api/opportunities` and `GET /api/opportunities/:id`, including website
 features. Application reads use `DATABASE_URL` in development and production;
 there is no mock-data fallback when the database is unavailable. Restart the
-application after changing its database environment. No new migration is needed
-for these reads.
+application after changing its database environment. Apply the included migrations
+before starting the website.
 
 Scraper writers must supply a unique canonical source URL and a `website_id`
-referencing `websites.id`. See [Scraper database integration](docs/scraper-database.md)
+referencing the numeric `website_indexes.id`. See [Scraper database integration](docs/scraper-database.md)
 for the writer protocol, validation responsibilities, and deletion behavior.
 
 ### Create an administrator
@@ -334,7 +346,8 @@ URLs to distinguish matching names. Select a suggestion to link that source;
 editing the name clears the selection. For a new organisation, supply its HTTPS
 index URL. Publishing also creates a source with scraping disabled and empty
 notes; enable it later in Scraper or Indexes if needed. Website features are
-resolved by the backend, without manual platform identifiers.
+read directly from the selected source. Edit them under Indexes; new sources
+start with no feature tags.
 
 Exact opening and closing times use UTC. A month-only deadline uses `YYYY-MM`
 and closes at the start of that month. An optional place label, latitude, and
@@ -346,10 +359,10 @@ saves the listing and any new source in one transaction, then opens its public
 detail page. Publication is immediate; there are no persisted unpublished
 drafts. Leaving the form warns about unsaved input, and errors preserve entries.
 
-The API uses `DATABASE_URL`. No new migration or opportunity seed is required. Existing
+The API uses `DATABASE_URL` and requires migration `0007_unify-website-indexes`. Existing
 consultation URLs and URLs previously marked deleted return a conflict rather
 than being overwritten or undeleted. A failed publish rolls back the new
-source, internal website, and history as well. History is linked to the selected
+source and history as well. History is linked to the selected
 or newly created source. New manual history rows have no scrape hash; existing
 history dates and hashes are preserved. A different existing source association
 returns a conflict. Future scraper runs still use their existing
