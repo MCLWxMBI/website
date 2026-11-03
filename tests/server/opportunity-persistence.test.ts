@@ -8,7 +8,7 @@ const row: OpportunityRecord = {
   title: 'Consultation title',
   fullText: ['A paragraph of consultation text.'],
   sourceUrl: 'https://example.gov.au/consultation',
-  websiteId: 'another-platform',
+  websiteId: 42n,
   sourceOrg: 'Publishing organisation',
   jurisdiction: 'Victoria',
   startDate: null,
@@ -21,11 +21,16 @@ const row: OpportunityRecord = {
 }
 
 describe('opportunity persistence boundary', () => {
+  it('serializes source IDs beyond JavaScript safe integers without losing precision', () => {
+    const response = serializeOpportunity({ ...row, websiteId: 9007199254740993n })
+    expect(response.website).toBe('9007199254740993')
+    expect(() => JSON.stringify(response)).not.toThrow()
+  })
   it('maps persisted fields and omits null optional fields and stored-only details', () => {
     const response = serializeOpportunity(row)
     expect(response).toEqual({
       id: row.id, title: row.title, fullText: row.fullText, sourceUrl: row.sourceUrl,
-      website: row.websiteId, sourceOrg: row.sourceOrg, jurisdiction: row.jurisdiction,
+      website: row.websiteId.toString(), sourceOrg: row.sourceOrg, jurisdiction: row.jurisdiction,
       startDate: null, submissionDeadline: '2026-10-23T06:00:00.000Z',
       category: row.category, tags: null
     })

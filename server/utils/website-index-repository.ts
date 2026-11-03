@@ -1,8 +1,9 @@
 import { asc, eq, inArray, sql } from 'drizzle-orm'
 import { connectDatabase } from '../database'
-import { websiteIndexes } from '../database/schema'
+import { opportunities, websiteIndexes } from '../database/schema'
 import {
   WebsiteIndexConflictError,
+  WebsiteIndexInUseError,
   type AdminWebsiteIndexRepository
 } from '../services/admin-website-indexes'
 import type { WebsiteIndexRepository } from '../services/website-indexes'
@@ -63,12 +64,18 @@ export function createAdminWebsiteIndexRepository(
           }
         }
 
+        if (deleteIds.length) {
+          const referenced = await tx.select({ id: opportunities.id }).from(opportunities)
+            .where(inArray(opportunities.websiteId, deleteIds)).limit(1)
+          if (referenced.length) throw new WebsiteIndexInUseError()
+        }
         for (const item of upserts) {
           const values = {
             name: item.name,
             indexUrl: item.indexUrl,
             active: item.active,
-            notes: item.notes
+            notes: item.notes,
+            ...(item.tags === undefined ? {} : { tags: item.tags })
           }
           if (item.id === undefined) {
             await tx.insert(websiteIndexes).values(values)

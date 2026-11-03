@@ -5,7 +5,7 @@ export function makeOpportunity(overrides: Partial<Opportunity> = {}): Opportuni
   return {
     id: 'test-consultation', title: 'Test consultation', summary: 'A short summary.',
     fullText: ['Consultation text.'], sourceUrl: 'https://example.gov.au/consultation',
-    website: 'test-platform', sourceOrg: 'Test authority', jurisdiction: 'Victoria',
+    website: '42', sourceOrg: 'Test authority', jurisdiction: 'Victoria',
     startDate: null, submissionDeadline: '2026-11-06T17:00:00Z',
     category: ['Climate change'], tags: null, ...overrides
   }

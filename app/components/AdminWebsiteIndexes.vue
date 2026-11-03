@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdminTagInput from '~/components/AdminTagInput.vue'
 import type { AdminWebsiteIndexesResponse } from '~~/shared/types/website-index'
 import {
   buildWebsiteIndexUpdateRequest,
@@ -95,9 +96,11 @@ async function saveAll() {
       : statusCode === 401
         ? 'Your administrator session has expired. Sign in again before saving.'
       : statusCode === 400
-        ? 'The changes could not be saved. Check every name, URL, status, and note.'
+        ? 'The changes could not be saved. Check every name, URL, status, feature tag, and note.'
         : statusCode === 409
-          ? 'Another administrator changed these records. Reload the indexes before trying again.'
+          ? ((cause as { data?: { data?: { reason?: string } } }).data?.data?.reason === 'source_in_use'
+            ? 'This source has published opportunities. Disable scraping instead of deleting it.'
+            : 'Another administrator changed these records. Reload the indexes before trying again.')
           : 'The changes could not be saved. Your edits are still here.'
   } finally {
     saving.value = false
@@ -162,6 +165,8 @@ onBeforeRouteLeave(() => !dirty.value || window.confirm('Leave without saving yo
             <input :id="`${draft.key}-active`" v-model="draft.active" type="checkbox">
             Active
           </label>
+
+          <AdminTagInput v-model="draft.tags" label="Website features" :disabled="saving || draft.deleted" />
 
           <label :for="`${draft.key}-notes`">Internal notes</label>
           <textarea :id="`${draft.key}-notes`" v-model="draft.notes" rows="4" placeholder="Optional notes for administrators" />

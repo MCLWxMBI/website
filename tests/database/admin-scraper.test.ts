@@ -7,7 +7,7 @@ import postgres from 'postgres'
 import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { connectDatabase } from '../../server/database'
-import { articleHistory, opportunities, websiteIndexes, websites } from '../../server/database/schema'
+import { articleHistory, opportunities, websiteIndexes } from '../../server/database/schema'
 import { createAdminScraperRepository } from '../../server/utils/admin-scraper-repository'
 import { createAdminWebsiteIndexRepository } from '../../server/utils/website-index-repository'
 import { saveAdminScraperSources, readAdminScraperArticles } from '../../server/services/admin-scraper'
@@ -71,7 +71,7 @@ describe('source tracking and admin scraper panel', () => {
   describe('migrated queries', () => {
     let sourceId: bigint
     beforeEach(async () => {
-      await connection.client`TRUNCATE opportunities, article_history, websites, website_indexes RESTART IDENTITY`
+      await connection.client`TRUNCATE opportunities, article_history, website_indexes RESTART IDENTITY`
       const [source] = await connection.db.insert(websiteIndexes).values({ name: 'Zulu', indexUrl: 'https://example.gov.au/project', active: false }).returning()
       sourceId = source!.id
       await connection.db.insert(websiteIndexes).values({ name: 'Alpha empty', indexUrl: 'https://empty.gov.au' })
@@ -89,7 +89,6 @@ describe('source tracking and admin scraper panel', () => {
       const before = await connection.db.select().from(websiteIndexes).orderBy(websiteIndexes.id)
       const histories = await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)
       const records = await connection.db.select().from(opportunities).orderBy(opportunities.id)
-      const features = await connection.db.select().from(websites).orderBy(websites.id)
       const result = await saveAdminScraperSources({
         updates: [
           { id: sourceId.toString(), active: true, expectedActive: false }
@@ -100,7 +99,6 @@ describe('source tracking and admin scraper panel', () => {
       expect(after).toEqual(before.map(row => row.id === sourceId ? { ...row, active: true } : row))
       expect(await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)).toEqual(histories)
       expect(await connection.db.select().from(opportunities).orderBy(opportunities.id)).toEqual(records)
-      expect(await connection.db.select().from(websites).orderBy(websites.id)).toEqual(features)
     })
     it('rejects missing or stale source rows atomically, retaining every existing flag', async () => {
       const before = await repository.sources()
@@ -152,10 +150,9 @@ describe('source tracking and admin scraper panel', () => {
     it('sorts most recent first, breaks ties by URL, puts unknown dates last, and joins opportunities', async () => {
       await history('unknown', { uploadDate: null }); await history('z'); await history('a')
       await history('recent', { uploadDate: '2026-02-01', hash: 'c'.repeat(64) })
-      await connection.db.insert(websites).values({ id: 'platform', tags: [] })
       await connection.db.insert(opportunities).values({
         id: 'linked', title: 'Linked', fullText: ['Text.'],
-        sourceUrl: 'https://example.gov.au/recent', websiteId: 'platform', sourceOrg: 'Org', jurisdiction: 'Victoria',
+        sourceUrl: 'https://example.gov.au/recent', websiteId: sourceId, sourceOrg: 'Org', jurisdiction: 'Victoria',
         submissionDeadline: new Date('2027-01-01Z'), category: ['Climate change']
       })
       const result = await repository.articles({ sourceId, q: '', page: 1 })
@@ -193,22 +190,15 @@ describe('source tracking and admin scraper panel', () => {
       await expect(connection.db.insert(articleHistory).values({ sourceUrl: 'https://example.gov.au/bad', title: 'Bad FK', sourceIndexId: 999n }))
         .rejects.toMatchObject({ cause: { code: '23503' } })
     })
-    it('links seed articles when registry entries exist and preserves hashes, dates, and known associations on rerun', async () => {
+    it('creates linked fixture sources and retains hashes and dates on rerun', async () => {
       await seedDatabase(connection.client)
       const before = await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)
-      expect(before.every(r => r.sourceIndexId === null)).toBe(true)
-      await connection.db.insert(websiteIndexes).values([
-        { name: 'Engage Victoria', indexUrl: 'https://engage.vic.gov.au/project' },
-        { name: 'DCCEEW', indexUrl: 'https://consult.dcceew.gov.au/find-consultations' }
-      ])
+      expect(before.every(r => r.sourceIndexId !== null)).toBe(true)
       await seedDatabase(connection.client)
-      const linked = await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)
-      expect(linked.every(r => r.sourceIndexId !== null)).toBe(true)
-      expect(linked.map(r => r.hash)).toEqual(before.map(r => r.hash))
-      expect(linked.map(r => r.uploadDate)).toEqual(before.map(r => r.uploadDate))
-      await connection.db.update(articleHistory).set({ sourceIndexId: sourceId }).where(eq(articleHistory.sourceUrl, linked[0]!.sourceUrl))
-      await seedDatabase(connection.client)
-      expect((await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, linked[0]!.sourceUrl)))[0]?.sourceIndexId).toBe(sourceId)
+      expect(await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)).toEqual(before)
+      await connection.db.update(articleHistory).set({ sourceIndexId: sourceId }).where(eq(articleHistory.sourceUrl, before[0]!.sourceUrl))
+      await expect(seedDatabase(connection.client)).rejects.toThrow('different source')
+      expect((await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, before[0]!.sourceUrl)))[0]?.sourceIndexId).toBe(sourceId)
     })
   })
 })

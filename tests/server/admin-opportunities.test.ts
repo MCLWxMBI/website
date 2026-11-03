@@ -4,7 +4,7 @@ import { makeCreateOpportunity } from '../support/admin-opportunity'
 
 function repository(): AdminOpportunityRepository {
   return { options: vi.fn().mockResolvedValue({ sources: [] }), create: vi.fn().mockImplementation(async (input, id) => ({
-    opportunity: { ...input, sourceOrg: 'Test authority', id, websiteId: 'existing-platform', startDate: null, submissionDeadline: new Date('2027-11-01T00:00:00Z'),
+    opportunity: { ...input, sourceOrg: 'Test authority', id, websiteId: 42n, startDate: null, submissionDeadline: new Date('2027-11-01T00:00:00Z'),
       submissionDeadlinePrecision: 'month', summary: null, location: null }, websiteTags: ['Online submission']
   })) }
 }
@@ -21,7 +21,7 @@ describe('admin opportunity services', () => {
     const repo = repository()
     const result = await publishAdminOpportunity(makeCreateOpportunity({ submissionDeadline: '2027-11' }), repo)
     expect(result.opportunity.id).toMatch(/^[0-9a-f-]{36}$/)
-    expect(result).toMatchObject({ opportunity: { submissionDeadline: '2027-11', website: 'existing-platform' }, websiteTags: ['Online submission'] })
+    expect(result).toMatchObject({ opportunity: { submissionDeadline: '2027-11', website: '42' }, websiteTags: ['Online submission'] })
     expect(result.opportunity).not.toHaveProperty('hash')
     expect(result.opportunity).not.toHaveProperty('submissionDeadlinePrecision')
   })

@@ -237,7 +237,7 @@ Selection is stored in
 link keyboard behavior without custom arrow-key controls.
 
 Indexes uses responsive form cards for editing names, HTTPS URLs, active
-statuses, and internal notes. Administrators can add records or stage existing
+statuses, website feature tags, and internal notes. Administrators can add records or stage existing
 records for deletion, with an undo action available until saving. One **Save all
 changes** action locks the form briefly and commits the complete batch. Errors
 leave local edits intact, while successful changes become visible on the public
@@ -248,7 +248,7 @@ form with an in-page preview and explicit publication. Optional map input is a
 label and point coordinates. Publishing organisation is an editable autocomplete
 showing source names and index URLs, including inactive sources. New names
 require an index URL; publication creates a disabled source atomically with the
-listing. The backend resolves website features and source links. No platform
+listing. The backend links opportunities directly to sources and reads their feature tags. No platform
 identifier is entered by the administrator.
 
 The protected `/admin/pages/[slug]` editor uses Jodit for familiar rich-text

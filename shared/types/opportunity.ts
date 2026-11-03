@@ -46,6 +46,7 @@ export interface OpportunityResponse {
   summary?: string
   fullText: string[]
   sourceUrl: string
+  /** Decimal website_indexes.id, serialized without losing bigint precision. */
   website: string
   sourceOrg: string
   jurisdiction: Jurisdiction

@@ -1,3 +1,4 @@
+import { normalizeOpportunityLabels } from '~~/shared/utils/admin-opportunity'
 import type {
   AdminWebsiteIndex,
   UpdateWebsiteIndexesRequest,
@@ -11,6 +12,7 @@ export interface WebsiteIndexDraft {
   indexUrl: string
   active: boolean
   notes: string
+  tags: string[]
   deleted: boolean
 }
 
@@ -22,12 +24,13 @@ export function websiteIndexesToDrafts(indexes: AdminWebsiteIndex[]): WebsiteInd
     indexUrl: index.indexUrl,
     active: index.active,
     notes: index.notes ?? '',
+    tags: [...index.tags],
     deleted: false
   }))
 }
 
 export function createWebsiteIndexDraft(key: string): WebsiteIndexDraft {
-  return { key, name: '', indexUrl: '', active: true, notes: '', deleted: false }
+  return { key, name: '', indexUrl: '', active: true, notes: '', tags: [], deleted: false }
 }
 
 export function snapshotWebsiteIndexDrafts(drafts: WebsiteIndexDraft[]): string {
@@ -39,7 +42,8 @@ function editableSnapshot(draft: WebsiteIndexDraft) {
     name: draft.name,
     indexUrl: draft.indexUrl,
     active: draft.active,
-    notes: draft.notes
+    notes: draft.notes,
+    tags: draft.tags
   })
 }
 
@@ -60,7 +64,8 @@ export function buildWebsiteIndexUpdateRequest(
         name: draft.name,
         indexUrl: draft.indexUrl,
         active: draft.active,
-        notes: draft.notes
+        notes: draft.notes,
+        tags: draft.tags
       }
       if (draft.id) {
         item.id = draft.id
@@ -78,6 +83,7 @@ export function buildWebsiteIndexUpdateRequest(
 export function validateWebsiteIndexDrafts(drafts: WebsiteIndexDraft[]): string | null {
   for (const draft of drafts) {
     if (draft.deleted) continue
+    try { normalizeOpportunityLabels(draft.tags, 'tags') } catch { return 'Enter nonblank, plain-text website feature tags.' }
     const name = draft.name.trim()
     if (!name) return 'Enter a name for every website index.'
     if (name.length > 255) return 'Website index names cannot exceed 255 characters.'

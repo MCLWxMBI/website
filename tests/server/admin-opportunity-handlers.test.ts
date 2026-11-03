@@ -14,7 +14,7 @@ beforeEach(() => {
   requireAdmin.mockReset().mockResolvedValue({})
   readBody.mockResolvedValue(makeCreateOpportunity())
   repo.options.mockResolvedValue({ sources: [] })
-  repo.create.mockImplementation(async (input, id) => ({ opportunity: { ...input, sourceOrg: 'Test authority', id, websiteId: 'existing-platform', startDate: null,
+  repo.create.mockImplementation(async (input, id) => ({ opportunity: { ...input, sourceOrg: 'Test authority', id, websiteId: 42n, startDate: null,
     submissionDeadline: new Date(input.submissionDeadline), submissionDeadlinePrecision: 'datetime', summary: null, location: null }, websiteTags: [] }))
 })
 describe('protected opportunity creation handlers', () => {

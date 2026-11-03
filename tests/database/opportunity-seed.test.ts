@@ -4,7 +4,7 @@ import postgres from 'postgres'
 import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { connectDatabase } from '../../server/database'
-import { articleHistory, opportunities, websites } from '../../server/database/schema'
+import { articleHistory, opportunities, websiteIndexes } from '../../server/database/schema'
 import { createOpportunityRepository } from '../../server/utils/opportunity-repository'
 import { listOpportunities, readOpportunity } from '../../server/services/opportunities'
 import { seedDatabase } from '../../scripts/seed-database'
@@ -30,7 +30,7 @@ describe('development SQL seed and database catalogue', () => {
 
   beforeEach(async () => {
     // This connection points only to the randomly named test database above.
-    await connection.client`TRUNCATE opportunities, article_history, websites`
+    await connection.client`TRUNCATE opportunities, article_history, website_indexes RESTART IDENTITY`
   })
 
   afterAll(async () => {
@@ -48,7 +48,7 @@ describe('development SQL seed and database catalogue', () => {
     expect(rows.filter(row => row.location).map(row => row.location!.geometry.type).sort())
       .toEqual(['MultiPolygon', 'Point', 'Polygon'])
     for (const row of rows) {
-      const prefix = row.websiteId === 'engage-victoria'
+      const prefix = row.sourceUrl.startsWith('https://engage.vic.gov.au/')
         ? 'https://engage.vic.gov.au/project/placeholder-'
         : 'https://consult.dcceew.gov.au/find-consultations/placeholder-'
       expect(row.sourceUrl).toBe(prefix + row.id)
@@ -62,10 +62,12 @@ describe('development SQL seed and database catalogue', () => {
       expect(history.hash).toMatch(/^[0-9a-f]{64}$/)
       expect(history.uploadDate).toMatch(/^2026-\d{2}-\d{2}$/)
     }
-    expect(await connection.db.select().from(websites)).toHaveLength(2)
+    expect(await connection.db.select().from(websiteIndexes)).toHaveLength(2)
     const repository = createOpportunityRepository(connection.db)
-    expect(await repository.findWebsiteTags('engage-victoria')).toEqual(['Login required', 'Online submission'])
-    expect(await repository.findWebsiteTags('dcceew-consult')).toEqual(['Online submission'])
+    const sources = await connection.db.select().from(websiteIndexes)
+    for (const row of rows) expect(histories.find(h => h.sourceUrl === row.sourceUrl)?.sourceIndexId).toBe(row.websiteId)
+    expect(await repository.findWebsiteTags(sources.find(s => s.indexUrl.includes('engage.vic'))!.id)).toEqual(['Login required', 'Online submission'])
+    expect(await repository.findWebsiteTags(sources.find(s => s.indexUrl.includes('dcceew'))!.id)).toEqual(['Online submission'])
     const month = await readOpportunity('nature-repair-methods', repository)
     expect(month.opportunity.submissionDeadline).toBe('2026-11')
     expect(month.opportunity.startDate).toBe('2026-09-21T00:00:00.000Z')
@@ -117,10 +119,10 @@ describe('development SQL seed and database catalogue', () => {
   })
 
   it('preserves unrelated records and reads new platform features, changed data, and ordering from PostgreSQL', async () => {
-    await connection.db.insert(websites).values({ id: 'additional-platform', tags: ['A database-only feature'] })
+    await connection.db.insert(websiteIndexes).values({ id: 100n, name: 'Additional', indexUrl: 'https://example.gov.au/', tags: ['A database-only feature'] })
     await connection.db.insert(opportunities).values({
       id: 'additional-record', title: 'Additional record', fullText: ['Database content.'],
-      sourceUrl: 'https://example.gov.au/additional', websiteId: 'additional-platform',
+      sourceUrl: 'https://example.gov.au/additional', websiteId: 100n,
       sourceOrg: 'Additional authority', jurisdiction: 'Victoria',
       submissionDeadline: new Date('2025-01-01T00:00:00Z'), category: ['Climate change']
     })
@@ -137,28 +139,51 @@ describe('development SQL seed and database catalogue', () => {
   })
 
   it('rolls back website updates, history placeholders, and opportunity writes on an ID conflict', async () => {
-    await connection.db.insert(websites).values({ id: 'engage-victoria', tags: ['Keep this feature'] })
+    await connection.db.insert(websiteIndexes).values({ id: 100n, name: 'Existing source', indexUrl: 'https://engage.vic.gov.au/project', active: false, notes: 'Keep notes', tags: ['Keep this feature'] })
+    const before = await connection.db.select().from(websiteIndexes)
     await connection.db.insert(opportunities).values({
       id: 'nature-repair-methods', title: 'Unrelated consultation', fullText: ['Keep this content.'],
-      sourceUrl: 'https://example.gov.au/unrelated', websiteId: 'engage-victoria',
+      sourceUrl: 'https://example.gov.au/unrelated', websiteId: 100n,
       sourceOrg: 'Existing authority', jurisdiction: 'Victoria',
       submissionDeadline: new Date('2027-01-01T00:00:00Z'), category: ['Climate change']
     })
     await expect(seedDatabase(connection.client)).rejects.toMatchObject({ code: '23505' })
-    expect(await connection.db.select().from(websites)).toEqual([{ id: 'engage-victoria', tags: ['Keep this feature'] }])
+    expect(await connection.db.select().from(websiteIndexes)).toEqual(before)
     expect(await connection.db.select().from(opportunities)).toHaveLength(1)
     expect(await connection.db.select().from(articleHistory)).toHaveLength(1)
     expect((await connection.db.select().from(opportunities))[0]?.title).toBe('Unrelated consultation')
   })
 
+  it('preserves source settings while reusing fixtures and leaves unrelated feature tags intact', async () => {
+    await connection.db.insert(websiteIndexes).values([
+      { id: 100n, name: 'Custom Engage name', indexUrl: 'https://engage.vic.gov.au/project/', active: false, notes: 'Keep notes', tags: ['Old fixture feature'] },
+      { id: 200n, name: 'Unrelated', indexUrl: 'https://unrelated.gov.au', tags: ['Keep this feature'] }
+    ])
+    await seedDatabase(connection.client)
+    const sources = await connection.db.select().from(websiteIndexes)
+    expect(sources.find(s => s.id === 100n)).toMatchObject({ name: 'Custom Engage name', active: false, notes: 'Keep notes', tags: ['Login required', 'Online submission'] })
+    expect(sources.find(s => s.id === 200n)?.tags).toEqual(['Keep this feature'])
+    expect((await connection.db.select().from(opportunities)).filter(o => o.websiteId === 100n)).toHaveLength(6)
+  })
+  it('rolls back an ambiguous source URL without inserting fixtures or changing tags', async () => {
+    await connection.db.insert(websiteIndexes).values([
+      { name: 'First', indexUrl: 'https://engage.vic.gov.au/project', tags: ['Keep first'] },
+      { name: 'Second', indexUrl: 'https://engage.vic.gov.au/project/', tags: ['Keep second'] }
+    ])
+    const before = await connection.db.select().from(websiteIndexes)
+    await expect(seedDatabase(connection.client)).rejects.toThrow('ambiguous')
+    expect(await connection.db.select().from(websiteIndexes)).toEqual(before)
+    expect(await connection.db.select().from(opportunities)).toEqual([])
+    expect(await connection.db.select().from(articleHistory)).toEqual([])
+  })
   it('returns empty results before seeding and sorts equal deadlines by ID', async () => {
     const repository = createOpportunityRepository(connection.db)
     expect(await listOpportunities(repository)).toEqual([])
     await expect(readOpportunity('missing', repository)).rejects.toMatchObject({ statusCode: 404 })
-    await connection.db.insert(websites).values({ id: 'ties', tags: [] })
+    await connection.db.insert(websiteIndexes).values({ id: 100n, name: 'Ties', indexUrl: 'https://example.gov.au' })
     for (const id of ['z', 'a']) await connection.db.insert(opportunities).values({
       id, title: id, fullText: ['Text.'], sourceUrl: `https://example.gov.au/${id}`,
-      websiteId: 'ties', sourceOrg: 'Authority', jurisdiction: 'Victoria',
+      websiteId: 100n, sourceOrg: 'Authority', jurisdiction: 'Victoria',
       submissionDeadline: new Date('2026-11-01T00:00:00Z'), category: ['Climate change']
     })
     expect((await listOpportunities(repository)).map(row => row.id)).toEqual(['a', 'z'])

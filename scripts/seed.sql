@@ -1,13 +1,37 @@
 -- Synthetic development fixtures only. Run through npm run db:seed after migrations.
--- The runner owns the transaction; no users, pages, or website indexes are changed.
+-- The runner owns the transaction. Existing source names, flags, and notes are preserved.
 SET LOCAL TIME ZONE 'UTC';
+
+-- Serialize source fixture resolution because index URLs are not unique in the registry.
+LOCK TABLE public.website_indexes IN SHARE ROW EXCLUSIVE MODE;
+CREATE TEMP TABLE source_seed (name text, index_url text, tags text[]) ON COMMIT DROP;
+INSERT INTO source_seed VALUES
+  ('Engage Victoria', 'https://engage.vic.gov.au/project', ARRAY['Login required', 'Online submission']),
+  ('Department of Climate Change, Energy, the Environment and Water', 'https://consult.dcceew.gov.au/find-consultations', ARRAY['Online submission']);
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT seed.index_url FROM source_seed seed JOIN public.website_indexes indexes
+      ON rtrim(indexes.index_url, '/') = seed.index_url
+    GROUP BY seed.index_url HAVING count(*) > 1
+  ) THEN
+    RAISE EXCEPTION 'Seed source index URL is ambiguous; resolve duplicate registry entries first';
+  END IF;
+END $$;
+INSERT INTO public.website_indexes (name, index_url)
+SELECT seed.name, seed.index_url FROM source_seed seed
+WHERE NOT EXISTS (SELECT 1 FROM public.website_indexes indexes WHERE rtrim(indexes.index_url, '/') = seed.index_url)
+ORDER BY seed.index_url;
+UPDATE public.website_indexes indexes SET tags = seed.tags
+FROM source_seed seed WHERE rtrim(indexes.index_url, '/') = seed.index_url;
 
 -- Upload dates are synthetic first-upload dates, separate from content hashes.
 CREATE TEMP TABLE opportunity_seed (
   LIKE public.opportunities,
   upload_date date NOT NULL,
-  source_index_id bigint
+  source_index_id bigint,
+  source_index_url text NOT NULL
 ) ON COMMIT DROP;
+ALTER TABLE opportunity_seed ALTER COLUMN website_id DROP NOT NULL;
 
 INSERT INTO opportunity_seed
 SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
@@ -20,7 +44,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://engage.vic.gov.au/project/placeholder-victorian-biodiversity-strategy-2037",
-    "website_id": "engage-victoria",
+    "source_index_url": "https://engage.vic.gov.au/project",
     "source_org": "Department of Energy, Environment and Climate Action",
     "jurisdiction": "Victoria",
     "start_date": null,
@@ -42,7 +66,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://consult.dcceew.gov.au/find-consultations/placeholder-national-climate-risk-assessment",
-    "website_id": "dcceew-consult",
+    "source_index_url": "https://consult.dcceew.gov.au/find-consultations",
     "source_org": "Department of Climate Change, Energy, the Environment and Water",
     "jurisdiction": "Commonwealth",
     "start_date": "2026-08-04T00:00:00Z",
@@ -65,7 +89,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://consult.dcceew.gov.au/find-consultations/placeholder-murray-darling-basin-plan-review",
-    "website_id": "dcceew-consult",
+    "source_index_url": "https://consult.dcceew.gov.au/find-consultations",
     "source_org": "Murray–Darling Basin Authority",
     "jurisdiction": "Commonwealth",
     "start_date": null,
@@ -88,7 +112,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://consult.dcceew.gov.au/find-consultations/placeholder-offshore-renewables-guidance",
-    "website_id": "dcceew-consult",
+    "source_index_url": "https://consult.dcceew.gov.au/find-consultations",
     "source_org": "Department of Climate Change, Energy, the Environment and Water",
     "jurisdiction": "Commonwealth",
     "start_date": "2026-08-10T00:00:00Z",
@@ -168,7 +192,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://engage.vic.gov.au/project/placeholder-victorian-waterway-health",
-    "website_id": "engage-victoria",
+    "source_index_url": "https://engage.vic.gov.au/project",
     "source_org": "Department of Energy, Environment and Climate Action",
     "jurisdiction": "Victoria",
     "start_date": "2026-08-03T00:00:00Z",
@@ -242,7 +266,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://engage.vic.gov.au/project/placeholder-circular-economy-regulations",
-    "website_id": "engage-victoria",
+    "source_index_url": "https://engage.vic.gov.au/project",
     "source_org": "Sustainability Victoria",
     "jurisdiction": "Victoria",
     "start_date": "2026-08-17T00:00:00Z",
@@ -274,7 +298,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://engage.vic.gov.au/project/placeholder-cultural-landscape-guidelines",
-    "website_id": "engage-victoria",
+    "source_index_url": "https://engage.vic.gov.au/project",
     "source_org": "First Peoples – State Relations",
     "jurisdiction": "Victoria",
     "start_date": "2026-09-07T00:00:00Z",
@@ -299,7 +323,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://consult.dcceew.gov.au/find-consultations/placeholder-nature-repair-methods",
-    "website_id": "dcceew-consult",
+    "source_index_url": "https://consult.dcceew.gov.au/find-consultations",
     "source_org": "Department of Climate Change, Energy, the Environment and Water",
     "jurisdiction": "Commonwealth",
     "start_date": "2026-09-21T00:00:00Z",
@@ -321,7 +345,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://engage.vic.gov.au/project/placeholder-urban-forest-controls",
-    "website_id": "engage-victoria",
+    "source_index_url": "https://engage.vic.gov.au/project",
     "source_org": "Department of Transport and Planning",
     "jurisdiction": "Victoria",
     "start_date": "2026-05-11T00:00:00Z",
@@ -344,7 +368,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://consult.dcceew.gov.au/find-consultations/placeholder-epbc-offsets-policy",
-    "website_id": "dcceew-consult",
+    "source_index_url": "https://consult.dcceew.gov.au/find-consultations",
     "source_org": "Department of Climate Change, Energy, the Environment and Water",
     "jurisdiction": "Commonwealth",
     "start_date": "2026-04-20T00:00:00Z",
@@ -366,7 +390,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://engage.vic.gov.au/project/placeholder-victorian-coastal-strategy",
-    "website_id": "engage-victoria",
+    "source_index_url": "https://engage.vic.gov.au/project",
     "source_org": "Marine and Coastal Council",
     "jurisdiction": "Victoria",
     "start_date": "2026-03-16T00:00:00Z",
@@ -390,7 +414,7 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Researchers, community organisations, Traditional Owners, practitioners and members of the public are invited to contribute. Feedback will help refine the final policy approach and its implementation."
     ],
     "source_url": "https://consult.dcceew.gov.au/find-consultations/placeholder-critical-minerals-review",
-    "website_id": "dcceew-consult",
+    "source_index_url": "https://consult.dcceew.gov.au/find-consultations",
     "source_org": "Department of Industry, Science and Resources",
     "jurisdiction": "Commonwealth",
     "start_date": "2026-02-09T00:00:00Z",
@@ -410,20 +434,9 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
 ]
 $fixtures$::jsonb);
 
--- Resolve only the uniquely matching registry entry; the registry is seeded separately.
-UPDATE opportunity_seed AS seed SET source_index_id = (
-  SELECT CASE WHEN count(*) = 1 THEN min(id) ELSE NULL END
-  FROM public.website_indexes
-  WHERE rtrim(index_url, '/') = CASE seed.website_id
-    WHEN 'engage-victoria' THEN 'https://engage.vic.gov.au/project'
-    WHEN 'dcceew-consult' THEN 'https://consult.dcceew.gov.au/find-consultations'
-  END
-);
-
-INSERT INTO public.websites (id, tags) VALUES
-  ('engage-victoria', ARRAY['Login required', 'Online submission']),
-  ('dcceew-consult', ARRAY['Online submission'])
-ON CONFLICT (id) DO UPDATE SET tags = EXCLUDED.tags;
+-- Use registry IDs for both the opportunity and its discovery history.
+UPDATE opportunity_seed seed SET website_id = indexes.id, source_index_id = indexes.id
+FROM public.website_indexes indexes WHERE rtrim(indexes.index_url, '/') = seed.source_index_url;
 
 -- Create history first, then lock in canonical URL order like the scraper.
 INSERT INTO public.article_history (source_url, title, upload_date, source_index_id)
@@ -433,6 +446,12 @@ ON CONFLICT (source_url) DO NOTHING;
 SELECT source_url FROM public.article_history
 WHERE source_url IN (SELECT source_url FROM opportunity_seed)
 ORDER BY source_url FOR UPDATE;
+
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM opportunity_seed seed JOIN public.article_history history USING (source_url)
+    WHERE NOT history.deleted AND history.source_index_id IS NOT NULL AND history.source_index_id <> seed.source_index_id)
+  THEN RAISE EXCEPTION 'A seed article is linked to a different source'; END IF;
+END $$;
 
 WITH saved AS (
   INSERT INTO public.opportunities (id, title, full_text, source_url, website_id, source_org, jurisdiction, start_date, submission_deadline, submission_deadline_precision, category, tags, summary, location)
@@ -460,7 +479,7 @@ WITH saved AS (
     title = saved.title,
     upload_date = COALESCE(history.upload_date, seed.upload_date),
     source_index_id = COALESCE(history.source_index_id, seed.source_index_id),
-    hash = encode(sha256(convert_to((to_jsonb(seed) - 'upload_date' - 'source_index_id')::text, 'UTF8')), 'hex')
+    hash = encode(sha256(convert_to((to_jsonb(seed) - 'upload_date' - 'source_index_id' - 'source_index_url')::text, 'UTF8')), 'hex')
   FROM saved JOIN opportunity_seed AS seed USING (source_url)
   WHERE history.source_url = saved.source_url AND NOT history.deleted
   RETURNING history.source_url
