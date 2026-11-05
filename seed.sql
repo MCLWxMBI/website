@@ -1,3 +1,12 @@
+-- Current opportunity filter categories. Reruns preserve IDs and additional categories.
+INSERT INTO public.categories (name) VALUES
+  ('Biodiversity & ecosystems'),
+  ('Climate change'),
+  ('First Nations & cultural heritage'),
+  ('Water & resources'),
+  ('Communities & environment')
+ON CONFLICT (name) DO NOTHING;
+
 WITH seed (id, name, index_url, active, notes) AS (
   VALUES
   (1, 'Legislative Assembly Environment and Planning Committee', 'https://www.parliament.vic.gov.au/epc-la', TRUE, NULL),

@@ -25,7 +25,7 @@ export async function publishAdminOpportunity(body: unknown, repository: AdminOp
   }
   try {
     const result = await repository.create(input, randomUUID())
-    return { opportunity: serializeOpportunity(result.opportunity), websiteTags: result.websiteTags }
+    return { opportunity: serializeOpportunity(result.opportunity, result.websiteTags), websiteTags: result.websiteTags }
   } catch (error) {
     if (error instanceof OpportunityCreateConflict) throw createError({ statusCode: 409, statusMessage: error.message,
       data: error.opportunityId ? { opportunityId: error.opportunityId } : undefined })

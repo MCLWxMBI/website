@@ -98,7 +98,7 @@ describe('manual opportunity publication in PostgreSQL', () => {
       location: { label: 'Melbourne', geometry: { type: 'Point', coordinates: [144.9631, -37.8136] } }
     }), repository)
     expect(result).toMatchObject({ opportunity: { website: '2', sourceOrg: 'New authority', submissionDeadline: '2027-11',
-      tags: ['science', 'Invite-only'], startDate: '2027-09-01T12:00:00.000Z', location: { label: 'Melbourne' } }, websiteTags: [] })
+      tags: ['science', 'Invite-only'], startDate: '2027-09-01T12:00:00.000Z', location: { label: 'Melbourne' } }, websiteTags: ['science', 'Invite-only'] })
     expect((await connection.db.select().from(websiteIndexes)).find(row => row.id === 2n)).toMatchObject({ ...newOrganisation.newSource, active: false, notes: null })
     expect((await connection.db.select().from(articleHistory))[0]?.sourceIndexId).toBe(2n)
     const [row] = await connection.db.select().from(opportunities)

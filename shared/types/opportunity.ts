@@ -53,6 +53,7 @@ export interface OpportunityResponse {
   startDate: string | null
   submissionDeadline: OpportunityDeadline
   category: OpportunityCategory[]
+  /** Tags inherited from website_indexes.tags; null when the source has none. */
   tags: string[] | null
   location?: OpportunityLocation
 }

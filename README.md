@@ -84,8 +84,8 @@ npm run db:migrate
 ```
 
 This creates `users`, `static_pages`, `website_indexes`,
-`opportunities`, and `article_history`, plus the `user_role` enum and opportunity
-validation/deletion functions and triggers. It records the applied migrations
+`opportunities`, `article_history`, and `categories`, plus the `user_role` enum
+and opportunity validation/deletion functions and triggers. It records the applied migrations
 so rerunning the command does not recreate the tables.
 
 When the Drizzle schema changes in the future, generate and review a new
@@ -99,6 +99,22 @@ npm run db:migrate
 Keep existing migration SQL and snapshots unchanged. Opportunity validation
 functions and deletion triggers are maintained explicitly in new migration SQL;
 review their ordering as well as the generated tables and constraints.
+
+### Category catalogue
+
+Migration `0008_add-categories` adds `categories` with a generated integer
+`id` and a required, unique, trimmed `name`. The migration creates the table;
+the root `seed.sql` and development `scripts/seed.sql` insert the existing five
+filter labels. Apply migrations before running either seed. This addition keeps
+the current opportunity category arrays and filter behaviour intact.
+
+### Opportunity source tags
+
+Migration `0009_drop-opportunity-tags` drops `opportunities.tags` and its
+check constraint. The catalogue, search, Access filter, cards, and detail pages
+read tags from `website_indexes.tags`. The existing public `tags` response
+field is derived from that source array. Existing per-opportunity tag values
+are dropped; source tags are retained.
 
 ### Consolidate website sources
 
@@ -124,10 +140,11 @@ fixed development credentials. It does not load environment files, show an
 environment picker, or use `DATABASE_URL`. Run it inside the devcontainer; it
 requires the existing migrations and never runs automatically on application
 startup. Its fixtures live in `scripts/seed.sql`; the root `seed.sql` remains the
-separate website-index registry seed.
+separate source-registry and category seed. Both SQL seeds populate the five
+current filter categories idempotently, preserving any additional category rows.
 
-Seeding writes 12 synthetic opportunities, feature tags on two source records, and
-matching scrape histories. Placeholder consultation URLs are unique beneath
+Seeding writes the five current categories, 12 synthetic opportunities, feature
+tags on two source records, and matching scrape histories. Placeholder consultation URLs are unique beneath
 the Engage Victoria and DCCEEW indexes. Missing fixture sources are created;
 existing names, scraping flags, and notes are preserved. Duplicate matching
 index URLs abort the seed. Reruns update matching fixtures, preserve
@@ -185,7 +202,7 @@ schema.
 ### Reset database data
 
 Clear opportunities, article history, website features, website indexes,
-administrator accounts, and managed static-page content while keeping the schema
+categories, administrator accounts, and managed static-page content while keeping the schema
 and Drizzle migration history:
 
 ```bash
@@ -338,7 +355,9 @@ Open **Opportunities** in the admin panel and choose **Create opportunity**, or
 visit `/admin/opportunities/new`. Enter the title, official HTTPS consultation
 URL, publishing organisation, jurisdiction, categories, plain-text paragraphs,
 and deadline. You can reorder paragraphs, supply an optional summary of up to
-35 words, and add other tags separately from the **Invite-only** toggle.
+35 words, and edit the selected source’s tags separately from the **Invite-only**
+toggle. The controls load the source’s current tags. Publishing saves edits to
+`website_indexes.tags`, affecting every opportunity linked to that source.
 
 Publishing organisation accepts free text and suggests existing sources as you
 type, including sources with scraping disabled. Suggestions show their index
@@ -346,8 +365,8 @@ URLs to distinguish matching names. Select a suggestion to link that source;
 editing the name clears the selection. For a new organisation, supply its HTTPS
 index URL. Publishing also creates a source with scraping disabled and empty
 notes; enable it later in Scraper or Indexes if needed. Website features are
-read directly from the selected source. Edit them under Indexes; new sources
-start with no feature tags.
+read directly from the selected source. Edit them under Indexes or in the
+creation form. New sources start with the tags entered in the form.
 
 Exact opening and closing times use UTC. A month-only deadline uses `YYYY-MM`
 and closes at the start of that month. An optional place label, latitude, and
@@ -359,7 +378,7 @@ saves the listing and any new source in one transaction, then opens its public
 detail page. Publication is immediate; there are no persisted unpublished
 drafts. Leaving the form warns about unsaved input, and errors preserve entries.
 
-The API uses `DATABASE_URL` and requires migration `0007_unify-website-indexes`. Existing
+The API uses `DATABASE_URL` and requires the latest migrations, including `0009_drop-opportunity-tags`. Existing
 consultation URLs and URLs previously marked deleted return a conflict rather
 than being overwritten or undeleted. A failed publish rolls back the new
 source and history as well. History is linked to the selected

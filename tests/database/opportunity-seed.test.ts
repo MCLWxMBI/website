@@ -44,7 +44,7 @@ describe('development SQL seed and database catalogue', () => {
     const rows = await connection.db.select().from(opportunities)
     expect(rows).toHaveLength(12)
     expect(new Set(rows.map(row => row.sourceUrl)).size).toBe(12)
-    expect(rows.filter(row => row.tags?.includes('Invite-only'))).toHaveLength(3)
+    expect(rows.every(row => !('tags' in row))).toBe(true)
     expect(rows.filter(row => row.location).map(row => row.location!.geometry.type).sort())
       .toEqual(['MultiPolygon', 'Point', 'Polygon'])
     for (const row of rows) {

@@ -192,7 +192,7 @@ interface OpportunityResponse {
 | **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than the effective `submissionDeadline` instant (the first day at midnight UTC for month-only deadlines). |
 | **submissionDeadline** | An ISO 8601 UTC timestamp ending in `Z`, or a canonical `YYYY-MM` month-only value. Month-only values require years `0001`–`9999` and months `01`–`12`; their effective closing instant is the first day of that month at midnight UTC. |
 | **category** | Array containing at least one supported category, without duplicates. |
-| **tags** | Flexible display labels, or `null` when the opportunity has none. Values must be trimmed, non-empty, non-null, and unique using case-insensitive comparison. |
+| **tags** | Labels inherited from `website_indexes.tags`, or `null` when the source array is empty. The opportunity has no stored tags column. These shared labels drive search, badges, and Access filtering for all opportunities from that source. |
 
 Supported categories are:
 
@@ -205,7 +205,7 @@ Supported categories are:
 Unknown category and jurisdiction values should be rejected or mapped by the
 API before the response reaches the frontend. Tag values are not restricted to
 a predefined list. The canonical `Invite-only` tag identifies opportunities
-that require an invitation and drives the catalogue's Access filter.
+from sources that require an invitation and drives the catalogue's Access filter.
 
 ### Fields the API SHOULD return
 
@@ -278,7 +278,7 @@ Migration `0004_deadline-precision` adds `submission_deadline_precision`, which 
 `datetime` by default, preserving existing rows. A `month` row stores the first
 day at midnight UTC in `submission_deadline`, but serializes as `YYYY-MM`; the
 precision column is not exposed in the public response.
-SQL null tags/start dates remain JSON null; null summary/location fields are
+Empty source tags and SQL null start dates become JSON null; null summary/location fields are
 omitted. `serializeOpportunity` provides this mapping and `toOpportunity`
 constructs the frontend model with the summary fallback. These helpers are used
 by the public catalogue and detail API. Development fixtures are stored in
@@ -291,6 +291,24 @@ The backend retrieves the tags for one website using the equivalent of:
 ~~~sql
 select tags from website_indexes where id = $1;
 ~~~
+
+Migration `0009_drop-opportunity-tags` removes the opportunity tags column and
+its check constraint. Website/source tags are preserved. Both list and detail
+responses derive `opportunity.tags` from the joined source; detail `websiteTags`
+contains the same values as an array.
+
+## Category catalogue
+
+`categories` stores category names corresponding to the existing opportunity
+filters. Each row has a generated integer `id` and a required, unique `name`;
+blank names and leading/trailing whitespace are rejected. Migration
+`0008_add-categories` creates the table without inserting data.
+
+Both SQL seeds insert Biodiversity & ecosystems, Climate change, First Nations
+& cultural heritage, Water & resources, and Communities & environment using
+`ON CONFLICT (name) DO NOTHING`. Reruns preserve IDs and additional rows.
+Opportunity `category text[]` values, validation, and filter responses retain
+their current contract; no new endpoint or category foreign key is introduced.
 
 ## Geographic location
 
@@ -440,11 +458,14 @@ no-store caching. Writes also require the existing CSRF token.
 - A new organisation requires a trimmed, nonblank plain-text name of at most
   255 characters and an absolute HTTPS index URL, following Indexes validation.
   It is created with `active=false` and null notes. Names alone do not link or
-  merge sources. Existing sources are not modified, including inactive ones.
+  merge sources. Existing source names, flags, and notes are preserved.
 - Title, paragraphs, and labels must be nonblank plain text. Categories and
   jurisdiction use shared controlled values. Labels are trimmed and deduplicated
-  ignoring case; `Invite-only` uses canonical spelling. Empty opportunity tags
-  become null. Blank summary is omitted; supplied summary has at most 35 words.
+  ignoring case; `Invite-only` uses canonical spelling. Optional request `tags`
+  updates the selected source’s `website_indexes.tags`; omit it to preserve the
+  existing array, or supply null/[] to clear it. These edits affect all linked
+  opportunities and are committed with publication. Blank summary is omitted;
+  supplied summary has at most 35 words.
 - The official URL must be HTTPS without credentials. URL parsing normalizes
   the hostname/default port and removes fragments while retaining path and query.
   Deadlines follow the existing UTC timestamp or month-only contract; opening
@@ -455,7 +476,8 @@ no-store caching. Writes also require the existing CSRF token.
   `data.opportunityId`. Database/configuration failures return generic `503`.
 
 Creation is atomic, locking the selected source then following history-first
-identity locking. It never upserts existing listings or website features.
+identity locking. It never upserts existing listings. Source tag edits are
+committed atomically with creation and roll back if publication fails.
 History links to the selected or newly created source through
 `article_history.source_index_id`; an existing null association is filled.
 New history uses the current UTC upload date, null hash, and false deletion
@@ -464,8 +486,9 @@ Deleted history prevents creation. Failed publication rolls back all new records
 
 The backend stores the selected source ID directly in `opportunities.website_id`.
 Creation options and public detail responses read `website_indexes.tags` directly.
-New sources have empty feature tags; existing tags are never changed by opportunity
-publication. Browser preview performs no writes.
+New sources receive the requested tags, defaulting to an empty array. The
+creation form preloads existing source tags, including its Invite-only toggle.
+Browser preview performs no writes.
 
 Shared creation types are in `shared/types/admin-opportunity.ts`. This feature
-requires migration 0007 and adds no persisted draft state or public write endpoint.
+requires migration 0009 and adds no persisted draft state or public write endpoint.

@@ -73,7 +73,7 @@ export function validateCreateOpportunity(value: unknown): CreateOpportunityRequ
   if (!jurisdictions.includes(value.jurisdiction as never)) return fail('jurisdiction', 'Select a supported jurisdiction.')
   const category = normalizeOpportunityLabels(value.category, 'category')
   if (!category.length || category.some(item => !opportunityCategories.includes(item as never))) return fail('category', 'Select at least one supported category.')
-  const tags = value.tags == null ? [] : normalizeOpportunityLabels(value.tags, 'tags', true)
+  const tags = value.tags === undefined ? undefined : value.tags === null ? [] : normalizeOpportunityLabels(value.tags, 'tags', true)
   let submissionDeadline: string
   try {
     if (typeof value.submissionDeadline !== 'string') throw new Error()
@@ -101,6 +101,7 @@ export function validateCreateOpportunity(value: unknown): CreateOpportunityRequ
     location = { label, geometry: { type: 'Point', coordinates: [coordinates[0], coordinates[1]] } }
   }
   return { title, fullText, sourceUrl, organisation: selectedOrganisation, jurisdiction: value.jurisdiction as CreateOpportunityRequest['jurisdiction'],
-    startDate, submissionDeadline, category: category as CreateOpportunityRequest['category'], tags: tags.length ? tags : null,
+    startDate, submissionDeadline, category: category as CreateOpportunityRequest['category'],
+    ...(tags === undefined ? {} : { tags: tags.length ? tags : null }),
     ...(summary ? { summary } : {}), ...(location ? { location } : {}) }
 }

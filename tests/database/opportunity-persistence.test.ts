@@ -117,11 +117,11 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
   it('records the migration once and preserves the existing schema and data', async () => {
     const tables = await connection.client`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`
     expect(tables.map(row => row.table_name)).toEqual([
-      'article_history', 'opportunities', 'static_pages', 'users', 'website_indexes'
+      'article_history', 'categories', 'opportunities', 'static_pages', 'users', 'website_indexes'
     ])
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(8)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(10)
     await migrate(connection.db, { migrationsFolder: './drizzle' })
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(8)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(10)
     if (scenario !== 'fresh') {
       expect((await connection.db.select().from(users))[0]?.username).toBe('existing-admin')
       expect((await connection.db.select().from(staticPages))[0]?.contentHtml).toBe('<h1>Existing page</h1>')
@@ -145,7 +145,8 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
     const response = serializeOpportunity(stored!)
     expect(response.website).toBe(fixtureSourceId.toString())
     expect(response.startDate).toBeNull()
-    expect(response.tags).toBeNull()
+    expect(stored).not.toHaveProperty('tags')
+    expect(serializeOpportunity(stored!, ['Login required']).tags).toEqual(['Login required'])
     expect(stored?.submissionDeadlinePrecision).toBe('datetime')
     expect(response.submissionDeadline).toBe('2026-11-20T00:00:00.000Z')
     expect(toOpportunity(response).summary).toBe('First paragraph.')
@@ -222,10 +223,6 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
     ['empty categories', { category: [] }],
     ['unknown category', { category: ['Unknown category'] }],
     ['duplicate categories', { category: ['Climate change', 'Climate change'] }],
-    ['empty tags', { tags: [] }],
-    ['null tag', { tags: [null] }],
-    ['padded tag', { tags: ['Tag '] }],
-    ['duplicate tags ignoring case', { tags: ['Invite-only', 'invite-only'] }],
     ['unknown jurisdiction', { jurisdiction: 'Unknown' }],
     ['HTTP source', { sourceUrl: 'http://example.gov.au/consultation' }],
     ['blank title', { title: ' ' }],
@@ -246,9 +243,9 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
       .rejects.toMatchObject({ code: '23514' })
   })
 
-  it('permits repeated paragraphs, null tags and valid optional geography', async () => {
+  it('permits repeated paragraphs and valid optional geography', async () => {
     const row = await insert({
-      fullText: ['Repeated paragraph.', 'Repeated paragraph.'], tags: null,
+      fullText: ['Repeated paragraph.', 'Repeated paragraph.'],
       location: { label: 'Melbourne', geometry: { type: 'Point', coordinates: [144.9, -37.8] } }
     })
     expect(row.fullText).toHaveLength(2)

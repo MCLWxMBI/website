@@ -16,7 +16,9 @@ function database() {
 export function createOpportunityRepository(db: ReturnType<typeof connectDatabase>['db']) {
   return {
     async all() {
-      return db.select().from(opportunities).orderBy(asc(opportunities.submissionDeadline), asc(opportunities.id))
+      return db.select({ opportunity: opportunities, websiteTags: websiteIndexes.tags }).from(opportunities)
+        .innerJoin(websiteIndexes, eq(opportunities.websiteId, websiteIndexes.id))
+        .orderBy(asc(opportunities.submissionDeadline), asc(opportunities.id))
     },
     async findDetailById(id: string) {
       const [row] = await db.select({ opportunity: opportunities, websiteTags: websiteIndexes.tags })
