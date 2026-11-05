@@ -46,6 +46,13 @@ export const websiteIndexes = pgTable('website_indexes', {
   check('website_indexes_tags_valid', sql`cardinality(${table.tags}) = 0 OR public.opportunity_text_array_valid(${table.tags}, TRUE)`)
 ])
 
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique()
+}, table => [
+  check('categories_name_valid', sql`${table.name} ~ '[^[:space:]]' AND ${table.name} !~ '^[[:space:]]|[[:space:]]$'`)
+])
+
 export const opportunities = pgTable('opportunities', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
@@ -58,7 +65,6 @@ export const opportunities = pgTable('opportunities', {
   submissionDeadline: timestamp('submission_deadline', { withTimezone: true }).notNull(),
   submissionDeadlinePrecision: text('submission_deadline_precision').$type<DeadlinePrecision>().notNull().default('datetime'),
   category: text('category').array().$type<OpportunityCategory[]>().notNull(),
-  tags: text('tags').array(),
   summary: text('summary'),
   location: jsonb('location').$type<OpportunityLocation>()
 }, table => [
@@ -80,7 +86,6 @@ export const opportunities = pgTable('opportunities', {
       'Biodiversity & ecosystems', 'Climate change', 'First Nations & cultural heritage',
       'Water & resources', 'Communities & environment'
     ]::TEXT[]`),
-  check('opportunities_tags_valid', sql`${table.tags} IS NULL OR public.opportunity_text_array_valid(${table.tags}, TRUE)`),
   check('opportunities_summary_nonempty', sql`${table.summary} IS NULL OR ${table.summary} ~ '[^[:space:]]'`),
   check('opportunities_location_valid', sql`${table.location} IS NULL OR (
     jsonb_typeof(${table.location}) = 'object'
@@ -115,6 +120,8 @@ export type StaticPage = typeof staticPages.$inferSelect
 export type NewStaticPage = typeof staticPages.$inferInsert
 export type WebsiteIndex = typeof websiteIndexes.$inferSelect
 export type NewWebsiteIndex = typeof websiteIndexes.$inferInsert
+export type Category = typeof categories.$inferSelect
+export type NewCategory = typeof categories.$inferInsert
 export type OpportunityRecord = typeof opportunities.$inferSelect
 export type NewOpportunity = typeof opportunities.$inferInsert
 export type ArticleHistory = typeof articleHistory.$inferSelect

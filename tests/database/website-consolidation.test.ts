@@ -51,7 +51,7 @@ describe.each(['empty', 'website', 'opportunity'] as const)('website consolidati
       const [schema] = await connection.client`SELECT to_regclass('public.websites') IS NULL AS old_table_removed,
         (SELECT data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='opportunities' AND column_name='website_id') AS id_type`
       expect(schema).toEqual({ old_table_removed: true, id_type: 'bigint' })
-      expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(8)
+      expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(10)
       await expect(connection.client`INSERT INTO opportunities
         (id,title,full_text,source_url,website_id,source_org,jurisdiction,submission_deadline,category)
         VALUES ('deleted','Deleted',ARRAY['Text.'],'https://example.gov.au/deleted',1,'Authority','Victoria','2027-01-01Z',ARRAY['Climate change'])`)

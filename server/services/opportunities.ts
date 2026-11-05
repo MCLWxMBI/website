@@ -4,7 +4,7 @@ import type { OpportunitiesResponse, OpportunityDetailResponse, OpportunityRespo
 import { serializeOpportunityDeadline } from '../../shared/utils/opportunity-deadline'
 
 // Keep storage fields and scrape history out of public responses.
-export function serializeOpportunity(row: OpportunityRecord): OpportunityResponse {
+export function serializeOpportunity(row: OpportunityRecord, websiteTags: string[] = []): OpportunityResponse {
   return {
     id: row.id,
     title: row.title,
@@ -16,14 +16,14 @@ export function serializeOpportunity(row: OpportunityRecord): OpportunityRespons
     startDate: row.startDate?.toISOString() ?? null,
     submissionDeadline: serializeOpportunityDeadline(row.submissionDeadline, row.submissionDeadlinePrecision),
     category: row.category,
-    tags: row.tags,
+    tags: websiteTags.length ? websiteTags : null,
     ...(row.summary === null ? {} : { summary: row.summary }),
     ...(row.location === null ? {} : { location: row.location })
   }
 }
 
 export interface OpportunityRepository {
-  all: () => Promise<OpportunityRecord[]>
+  all: () => Promise<{ opportunity: OpportunityRecord; websiteTags: string[] }[]>
   findDetailById: (id: string) => Promise<{ opportunity: OpportunityRecord; websiteTags: string[] } | null>
 }
 
@@ -34,7 +34,7 @@ const unavailable = () => createError({
 
 export async function listOpportunities(repository: OpportunityRepository): Promise<OpportunitiesResponse> {
   try {
-    return (await repository.all()).map(serializeOpportunity)
+    return (await repository.all()).map(row => serializeOpportunity(row.opportunity, row.websiteTags))
   } catch {
     throw unavailable()
   }
@@ -43,7 +43,7 @@ export async function listOpportunities(repository: OpportunityRepository): Prom
 export async function readOpportunity(id: string, repository: OpportunityRepository): Promise<OpportunityDetailResponse> {
   try {
     const detail = await repository.findDetailById(id)
-    if (detail) return { opportunity: serializeOpportunity(detail.opportunity), websiteTags: detail.websiteTags }
+    if (detail) return { opportunity: serializeOpportunity(detail.opportunity, detail.websiteTags), websiteTags: detail.websiteTags }
   } catch {
     throw unavailable()
   }

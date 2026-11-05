@@ -85,9 +85,9 @@ columns. The grid falls to two columns below 1050px. Below 760px, cards use one
 column and filters move into a right-side modal drawer.
 
 Search covers titles, summaries, publishers, jurisdictions, categories, and
-flexible tags. Filters cover location, category, status, and access. The Access
+shared source tags. Filters cover location, category, status, and access. The Access
 group contains Public and Invite-only checkboxes; both are selected by default.
-An opportunity is Invite-only when it carries the canonical `Invite-only` tag,
+An opportunity is Invite-only when its source carries the canonical `Invite-only` tag,
 and every other opportunity is Public. Clearing filters restores both access
 choices. Non-default access choices use `access=public`,
 `access=invite-only`, or `access=none` in the URL. Status is derived from the
@@ -154,7 +154,7 @@ Cards use a consistent information order:
 1. Status and jurisdiction.
 2. Publishing organisation.
 3. Opportunity title and concise summary.
-4. Up to two categories, followed by any flexible opportunity tags.
+4. Up to two categories, followed by any shared source tags.
 5. Relevant date and a clear detail-page affordance.
 
 The whole hierarchy should make the title and deadline scannable before

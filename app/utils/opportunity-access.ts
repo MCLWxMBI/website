@@ -5,6 +5,7 @@ export type OpportunityAccess = typeof opportunityAccessValues[number]
 
 export const defaultOpportunityAccess: OpportunityAccess[] = [...opportunityAccessValues]
 
+// Public opportunity tags are read from the linked website_indexes row.
 export function getOpportunityAccess(opportunity: Pick<Opportunity, 'tags'>): OpportunityAccess {
   return opportunity.tags?.some(tag => tag.trim().toLocaleLowerCase() === 'invite-only')
     ? 'invite-only'

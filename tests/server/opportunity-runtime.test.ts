@@ -8,7 +8,7 @@ beforeEach(() => { vi.resetModules(); connect.mockReset() })
 describe('runtime opportunity database selection', () => {
   it('connects lazily using DATABASE_URL rather than the seed target', async () => {
     const orderBy = vi.fn().mockResolvedValue([])
-    connect.mockReturnValue({ db: { select: () => ({ from: () => ({ orderBy }) }) } })
+    connect.mockReturnValue({ db: { select: () => ({ from: () => ({ innerJoin: () => ({ orderBy }) }) }) } })
     vi.stubEnv('DATABASE_URL', 'postgresql://runtime.example/catalogue')
     try {
       const { opportunityRepository } = await import('../../server/utils/opportunity-repository')

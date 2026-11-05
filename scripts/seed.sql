@@ -2,6 +2,16 @@
 -- The runner owns the transaction. Existing source names, flags, and notes are preserved.
 SET LOCAL TIME ZONE 'UTC';
 
+-- Current opportunity filter categories. Reruns preserve IDs and additional categories.
+INSERT INTO public.categories (name) VALUES
+  ('Biodiversity & ecosystems'),
+  ('Climate change'),
+  ('First Nations & cultural heritage'),
+  ('Water & resources'),
+  ('Communities & environment')
+ON CONFLICT (name) DO NOTHING;
+
+
 -- Serialize source fixture resolution because index URLs are not unique in the registry.
 LOCK TABLE public.website_indexes IN SHARE ROW EXCLUSIVE MODE;
 CREATE TEMP TABLE source_seed (name text, index_url text, tags text[]) ON COMMIT DROP;
@@ -53,7 +63,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
     "category": [
       "Biodiversity & ecosystems"
     ],
-    "tags": null,
     "summary": "Help shape the next decade of action to protect and restore Victoria’s native plants, animals and ecosystems.",
     "location": null,
     "upload_date": "2026-08-01"
@@ -76,7 +85,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Climate change",
       "Communities & environment"
     ],
-    "tags": null,
     "summary": "Comment on the framework used to identify, compare and prioritise nationally significant climate risks.",
     "location": null,
     "upload_date": "2026-08-04"
@@ -99,7 +107,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Water & resources",
       "First Nations & cultural heritage"
     ],
-    "tags": null,
     "summary": "Share evidence and experience to inform the first statutory review of the Murray–Darling Basin Plan.",
     "location": null,
     "upload_date": "2026-08-05"
@@ -121,9 +128,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
     "category": [
       "Climate change",
       "Biodiversity & ecosystems"
-    ],
-    "tags": [
-      "Invite-only"
     ],
     "summary": "Review proposed guidance for environmental assessment and community engagement in offshore renewable energy areas.",
     "location": {
@@ -202,7 +206,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Water & resources",
       "Biodiversity & ecosystems"
     ],
-    "tags": null,
     "summary": "Have your say on updated indicators and targets for rivers, wetlands and estuaries across Victoria.",
     "location": {
       "label": "Central Victoria study area (prototype geometry)",
@@ -276,7 +279,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Communities & environment",
       "Climate change"
     ],
-    "tags": null,
     "summary": "Provide feedback on proposed requirements for product stewardship, recovery targets and reporting.",
     "location": {
       "label": "Melbourne, Victoria",
@@ -308,9 +310,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "First Nations & cultural heritage",
       "Communities & environment"
     ],
-    "tags": [
-      "Invite-only"
-    ],
     "summary": "Upcoming consultation on recognising and protecting Aboriginal cultural landscapes in environmental planning.",
     "location": null,
     "upload_date": "2026-09-07"
@@ -332,7 +331,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
     "category": [
       "Biodiversity & ecosystems"
     ],
-    "tags": null,
     "summary": "Upcoming opportunity to comment on biodiversity assessment and restoration methods for new projects.",
     "location": null,
     "upload_date": "2026-09-21"
@@ -355,7 +353,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Communities & environment",
       "Biodiversity & ecosystems"
     ],
-    "tags": null,
     "summary": "Completed consultation on proposed planning controls to protect canopy trees in growing Victorian suburbs.",
     "location": null,
     "upload_date": "2026-05-11"
@@ -377,7 +374,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
     "category": [
       "Biodiversity & ecosystems"
     ],
-    "tags": null,
     "summary": "Completed consultation on restoration contributions and environmental offsets under national law.",
     "location": null,
     "upload_date": "2026-04-20"
@@ -401,7 +397,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
       "Communities & environment",
       "First Nations & cultural heritage"
     ],
-    "tags": null,
     "summary": "Completed consultation on priorities for resilient coastlines, marine ecosystems and coastal communities.",
     "location": null,
     "upload_date": "2026-03-16"
@@ -423,9 +418,6 @@ SELECT * FROM jsonb_populate_recordset(NULL::opportunity_seed, $fixtures$
     "category": [
       "Water & resources",
       "First Nations & cultural heritage"
-    ],
-    "tags": [
-      "Invite-only"
     ],
     "summary": "Completed review of environmental, community and economic priorities for Australia’s critical minerals sector.",
     "location": null,
@@ -454,8 +446,8 @@ DO $$ BEGIN
 END $$;
 
 WITH saved AS (
-  INSERT INTO public.opportunities (id, title, full_text, source_url, website_id, source_org, jurisdiction, start_date, submission_deadline, submission_deadline_precision, category, tags, summary, location)
-  SELECT seed.id, seed.title, seed.full_text, seed.source_url, seed.website_id, seed.source_org, seed.jurisdiction, seed.start_date, seed.submission_deadline, seed.submission_deadline_precision, seed.category, seed.tags, seed.summary, seed.location
+  INSERT INTO public.opportunities (id, title, full_text, source_url, website_id, source_org, jurisdiction, start_date, submission_deadline, submission_deadline_precision, category, summary, location)
+  SELECT seed.id, seed.title, seed.full_text, seed.source_url, seed.website_id, seed.source_org, seed.jurisdiction, seed.start_date, seed.submission_deadline, seed.submission_deadline_precision, seed.category, seed.summary, seed.location
   FROM opportunity_seed AS seed
   JOIN public.article_history AS history USING (source_url)
   WHERE NOT history.deleted
@@ -470,7 +462,6 @@ WITH saved AS (
     submission_deadline = EXCLUDED.submission_deadline,
     submission_deadline_precision = EXCLUDED.submission_deadline_precision,
     category = EXCLUDED.category,
-    tags = EXCLUDED.tags,
     summary = EXCLUDED.summary,
     location = EXCLUDED.location
   RETURNING source_url, title

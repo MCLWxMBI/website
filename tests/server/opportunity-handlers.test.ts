@@ -20,13 +20,13 @@ const row: OpportunityRecord = {
   sourceUrl: 'https://example.gov.au/another-consultation', websiteId: 42n,
   sourceOrg: 'New authority', jurisdiction: 'Commonwealth', startDate: null,
   submissionDeadline: new Date('2026-11-01T00:00:00Z'), submissionDeadlinePrecision: 'month',
-  category: ['Climate change'], tags: null, summary: null, location: null
+  category: ['Climate change'], summary: null, location: null
 }
 const event = {} as Parameters<typeof list>[0]
 
 beforeEach(() => {
   id = row.id
-  repository.all.mockResolvedValue([row])
+  repository.all.mockResolvedValue([{ opportunity: row, websiteTags: ['New database feature'] }])
   repository.findDetailById.mockResolvedValue({ opportunity: row, websiteTags: ['New database feature'] })
 })
 
@@ -34,7 +34,7 @@ describe('public opportunity APIs', () => {
   it('lists arbitrary database records without caching or exposing storage details', async () => {
     const result = await list(event)
     expect(result).toHaveLength(1)
-    expect(result[0]).toMatchObject({ id: row.id, website: '42', submissionDeadline: '2026-11' })
+    expect(result[0]).toMatchObject({ id: row.id, website: '42', submissionDeadline: '2026-11', tags: ['New database feature'] })
     for (const field of ['websiteId', 'submissionDeadlinePrecision', 'hash', 'deleted', 'status']) {
       expect(result[0]).not.toHaveProperty(field)
     }
@@ -51,6 +51,7 @@ describe('public opportunity APIs', () => {
     expect(repository.findDetailById).toHaveBeenCalledWith(row.id)
     expect(result.opportunity.submissionDeadline).toBe('2026-11')
     expect(result.websiteTags).toEqual(['New database feature'])
+    expect(result.opportunity.tags).toEqual(result.websiteTags)
     expect(headers).toHaveBeenCalledWith(event, 'Cache-Control', 'no-store')
   })
 

@@ -28,7 +28,12 @@ const previewSource = computed(() => {
   const selection = preview.value?.organisation
   return selection && 'existingId' in selection ? options.value?.sources.find(source => source.id === selection.existingId) : undefined
 })
-const websiteFeatures = computed(() => previewSource.value?.websiteTags ?? [])
+watch(selectedSource, source => {
+  const tags = source?.websiteTags ?? []
+  draft.value.inviteOnly = tags.some(tag => tag.trim().toLowerCase() === 'invite-only')
+  draft.value.tags = tags.filter(tag => tag.trim().toLowerCase() !== 'invite-only')
+})
+const websiteFeatures = computed(() => preview.value?.tags ?? [])
 const organisationName = computed(() => {
   const selection = preview.value?.organisation
   return selection && 'newSource' in selection ? selection.newSource.name : previewSource.value?.name ?? draft.value.sourceOrg
@@ -39,7 +44,7 @@ function fieldLabel(field: string) {
   if (field.startsWith('fullText.')) return 'Paragraph ' + (Number(field.split('.')[1]) + 1)
   if (field === 'organisation.newSource.indexUrl') return 'Organisation index URL'
   return ({ title: 'Title', sourceUrl: 'Official consultation URL', organisation: 'Publishing organisation', jurisdiction: 'Jurisdiction',
-    summary: 'Summary', fullText: 'Paragraphs', category: 'Categories', tags: 'Other tags',
+    summary: 'Summary', fullText: 'Paragraphs', category: 'Categories', tags: 'Website tags',
     startDate: 'Opening date and time', submissionDeadline: 'Deadline', location: 'Location', form: 'Listing' } as Record<string, string>)[field.split('.')[0]!] ?? 'Listing'
 }
 function moveParagraph(index: number, direction: number) {
@@ -146,7 +151,8 @@ onBeforeRouteLeave(confirmLeave)
         <label v-for="category in opportunityCategories" :key="category" class="choice"><input v-model="draft.categories" type="checkbox" :value="category"> {{ category }}</label>
       </fieldset>
       <fieldset :disabled="saving">
-        <legend>Opportunity tags</legend>
+        <legend>Website tags</legend>
+        <p>These tags belong to the source. Publishing saves them for all opportunities from this source.</p>
         <label class="choice"><input v-model="draft.inviteOnly" type="checkbox"> Invite-only</label>
         <AdminTagInput v-model="draft.tags" label="Other tags" invite-toggle :disabled="saving" @invite-only="draft.inviteOnly = true" />
       </fieldset>

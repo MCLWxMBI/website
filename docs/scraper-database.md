@@ -74,7 +74,8 @@ deletion triggers need no change and preserve the source association.
 Every opportunity writer must provide `website_id`, a bigint referencing an
 existing `website_indexes.id`. The source registry also owns `tags text[]` for
 website features, defaulting to an empty array. Labels must be trimmed, nonblank,
-plain text, and unique ignoring case. Opportunity-specific tags remain separate.
+plain text, and unique ignoring case. Opportunity labels and the Access filter inherit this source array; there is
+no `opportunities.tags` column after migration 0009.
 
 Migration `0007_unify-website-indexes` removes `websites` and its text keys.
 The migration requires empty opportunity and website tables and preserves source
@@ -96,8 +97,8 @@ and deployment are outside this repository change.
   one URL identifies one opportunity. Development seed records use unique
   placeholder paths beneath their referenced indexes; real scraper records must
   use actual canonical consultation URLs.
-- Populate `category text[]` with at least one supported category, and store
-  `tags text[]` as null when there are no flexible opportunity tags. Label arrays
+- Populate `category text[]` with at least one supported category. Store source
+  labels in `website_indexes.tags`, using an empty array when none are needed. Label arrays
   are trimmed, nonblank, and unique ignoring case. `full_text` contains an ordered,
   nonempty array of trimmed plain-text paragraphs; repeated paragraphs are valid.
 - Store finite timestamps and ensure a supplied opening time does not exceed the
@@ -145,7 +146,7 @@ INSERT INTO public.opportunities (
   submission_deadline, submission_deadline_precision, category
 ) VALUES (
   'water-plan', 'Water plan consultation', ARRAY['Feedback on the water plan.'],
-  'https://example.gov.au/consultations/water-plan', 'engage-victoria',
+  'https://example.gov.au/consultations/water-plan', 25,
   'Publishing authority', 'Victoria',
   '2026-11-01T00:00:00Z', 'month', ARRAY['Water & resources']
 )
@@ -191,9 +192,9 @@ History is linked to that source; conflicting known associations are rejected.
 New history rows have a null scrape hash and current UTC upload date. Existing
 hashes and upload dates are preserved, and the history title is refreshed.
 Manual publication never clears deletion markers or overwrites an existing
-opportunity or website features. Opportunity website IDs reference the selected
-source directly, and feature tags come from that source. New sources default to
-empty tags. Source, history, and opportunity changes commit or roll back together. The external scraper may update that canonical URL using
+opportunity. Optional source tag edits are saved in the same transaction. Opportunity website IDs reference the selected
+source directly, and feature tags come from that source. New sources use the supplied tags, defaulting to
+an empty array. Source tags, including Invite-only, apply to all linked opportunities. Source, history, and opportunity changes commit or roll back together. The external scraper may update that canonical URL using
 its normal protocol. See the admin creation contract in [contracts.md](contracts.md).
 
 ## Deletion and deliberate reimport
@@ -217,7 +218,7 @@ reset is a verification step.
 ## API preparation and verification
 
 `serializeOpportunity` maps Drizzle records to the shared response type: camelCase
-fields, UTC timestamps ending in `Z`, null tags/start dates, and omitted null
+fields, UTC timestamps ending in `Z`, empty source tags serialized as null and null start dates, and omitted null
 summary/location. `toOpportunity` supplies the documented first-paragraph summary
 fallback when the response summary is missing or blank, limiting it to 35 words
 and adding an ellipsis only when truncated. Status remains frontend-derived.

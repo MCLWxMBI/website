@@ -23,7 +23,7 @@ export function createAdminOpportunityRepository(db: ReturnType<typeof connectDa
       let source
       if ('existingId' in input.organisation) {
         // Keep the selected name and source alive until publication commits.
-        ;[source] = await tx.select().from(websiteIndexes).where(eq(websiteIndexes.id, BigInt(input.organisation.existingId))).for('share')
+        ;[source] = await tx.select().from(websiteIndexes).where(eq(websiteIndexes.id, BigInt(input.organisation.existingId))).for('update')
         if (!source) throw new OpportunityCreateConflict('The selected organisation no longer exists. Reload the organisation suggestions.')
       } else {
         ;[source] = await tx.insert(websiteIndexes).values({ ...input.organisation.newSource, active: false, notes: null }).returning()
@@ -38,16 +38,20 @@ export function createAdminOpportunityRepository(db: ReturnType<typeof connectDa
       if (history.sourceIndexId !== null && history.sourceIndexId !== source.id) {
         throw new OpportunityCreateConflict('This consultation URL is already linked to a different source. Select that source before publishing.')
       }
+      const websiteTags = input.tags === undefined ? source.tags : input.tags ?? []
+      if (input.tags !== undefined) {
+        await tx.update(websiteIndexes).set({ tags: websiteTags }).where(eq(websiteIndexes.id, source.id))
+      }
       const [opportunity] = await tx.insert(opportunities).values({
         id, title: input.title, fullText: input.fullText, sourceUrl: input.sourceUrl, websiteId: source.id,
         sourceOrg: source.name, jurisdiction: input.jurisdiction,
         startDate: input.startDate ? new Date(input.startDate) : null,
-        ...toStoredOpportunityDeadline(input.submissionDeadline), category: input.category, tags: input.tags,
+        ...toStoredOpportunityDeadline(input.submissionDeadline), category: input.category,
         summary: input.summary ?? null, location: input.location ?? null
       }).returning()
       // Manual publication is not a successful network scrape: retain hash and date.
       await tx.update(articleHistory).set({ title: input.title, sourceIndexId: source.id }).where(eq(articleHistory.sourceUrl, input.sourceUrl))
-      return { opportunity: opportunity!, websiteTags: source.tags }
+      return { opportunity: opportunity!, websiteTags }
     })
   }
 }

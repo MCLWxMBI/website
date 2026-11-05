@@ -15,7 +15,6 @@ const row: OpportunityRecord = {
   submissionDeadline: new Date('2026-10-23T17:00:00+11:00'),
   submissionDeadlinePrecision: 'datetime',
   category: ['Climate change'],
-  tags: null,
   summary: null,
   location: null
 }
@@ -50,8 +49,8 @@ describe('opportunity persistence boundary', () => {
     const location = { label: 'Melbourne', geometry: { type: 'Point' as const, coordinates: [144.9, -37.8] as [number, number] } }
     const response = serializeOpportunity({
       ...row, startDate: new Date('2026-10-01T09:00:00+10:00'),
-      summary: 'A supplied summary.', tags: ['Invite-only'], location
-    })
+      summary: 'A supplied summary.', location
+    }, ['Invite-only'])
     expect(response.startDate).toBe('2026-09-30T23:00:00.000Z')
     expect(response.summary).toBe('A supplied summary.')
     expect(response.tags).toEqual(['Invite-only'])

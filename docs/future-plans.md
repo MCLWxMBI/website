@@ -10,6 +10,6 @@ protocol described in [Scraper database integration](scraper-database.md).
 ## Opportunity administration
 
 Manual creation, preview, source selection/creation, the dedicated Invite-only
-toggle, and free-form tags are available in the Opportunities admin area.
+toggle, and shared source tags are available in the Opportunities admin area.
 Editing/deleting published opportunities, persisted unpublished drafts, and
 Polygon/MultiPolygon authoring remain deferred.
