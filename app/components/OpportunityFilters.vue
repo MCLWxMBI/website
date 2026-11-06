@@ -5,6 +5,7 @@ import type { OpportunityAccess } from '~/utils/opportunity-access'
 import { searchOpportunityAuthorities } from '~/utils/opportunity-authority'
 
 const authoritySearch = ref('')
+const deadlineId = useId()
 const props = defineProps<{
   authorities: string[]
   selectedAuthorities: string[]
@@ -12,6 +13,9 @@ const props = defineProps<{
   selectedCategories: OpportunityCategory[]
   selectedStatuses: OpportunityStatus[]
   selectedAccess: OpportunityAccess[]
+  deadlineFrom: string
+  deadlineTo: string
+  deadlineError: string | null
 }>()
 
 const emit = defineEmits<{
@@ -20,17 +24,23 @@ const emit = defineEmits<{
   toggleCategory: [value: OpportunityCategory]
   toggleStatus: [value: OpportunityStatus]
   toggleAccess: [value: OpportunityAccess]
+  updateDeadline: [bound: 'from' | 'to', value: string, invalid: boolean]
   clear: []
 }>()
 
 const visibleAuthorities = computed(() => searchOpportunityAuthorities(props.authorities, authoritySearch.value))
 const clear = () => { authoritySearch.value = ''; emit('clear') }
 
+function changeDeadline(bound: 'from' | 'to', event: Event) {
+  const input = event.target as HTMLInputElement
+  emit('updateDeadline', bound, input.value, !input.validity.valid)
+}
+
 const statusLabels: Record<OpportunityStatus, string> = { open: 'Open now', upcoming: 'Upcoming', closed: 'Closed' }
 const accessLabels: Record<OpportunityAccess, string> = { public: 'Public', 'invite-only': 'Invite-only' }
 const accessValues: OpportunityAccess[] = ['public', 'invite-only']
 const hasFilters = computed(() => props.selectedAuthorities.length + props.selectedJurisdictions.length + props.selectedCategories.length + props.selectedStatuses.length > 0
-  || props.selectedAccess.length !== accessValues.length)
+  || props.selectedAccess.length !== accessValues.length || Boolean(props.deadlineFrom || props.deadlineTo || props.deadlineError))
 </script>
 
 <template>
@@ -80,6 +90,19 @@ const hasFilters = computed(() => props.selectedAuthorities.length + props.selec
         <input type="checkbox" :checked="selectedCategories.includes(item)" @change="emit('toggleCategory', item)">
         <span>{{ item }}</span>
       </label>
+    </fieldset>
+    <fieldset class="deadline-filter">
+      <legend>Submission deadline</legend>
+      <label :for="`${deadlineId}-from`">From</label>
+      <input :id="`${deadlineId}-from`" :value="deadlineFrom" type="date" min="0001-01-01" max="9999-12-31"
+        :aria-invalid="Boolean(deadlineError) || undefined" :aria-describedby="`${deadlineId}-help${deadlineError ? ' ' + deadlineId + '-error' : ''}`"
+        @change="changeDeadline('from', $event)">
+      <label :for="`${deadlineId}-to`">To</label>
+      <input :id="`${deadlineId}-to`" :value="deadlineTo" type="date" min="0001-01-01" max="9999-12-31"
+        :aria-invalid="Boolean(deadlineError) || undefined" :aria-describedby="`${deadlineId}-help${deadlineError ? ' ' + deadlineId + '-error' : ''}`"
+        @change="changeDeadline('to', $event)">
+      <p :id="`${deadlineId}-help`" class="deadline-help">Dates use UTC and include both days. Month-only deadlines use the first day of the month.</p>
+      <p v-if="deadlineError" :id="`${deadlineId}-error`" class="deadline-error" role="alert">{{ deadlineError }} Results keep the last valid date range.</p>
     </fieldset>
     <fieldset>
       <legend>Status</legend>

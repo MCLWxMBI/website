@@ -83,6 +83,12 @@ main { flex: 1; }
 .check-row input:checked::before { transform: rotate(-45deg) scale(1); }
 .authority-search { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
 .authority-search input { min-width: 0; width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--muted); border-radius: 6px; background: white; color: var(--ink); font: inherit; }
+.deadline-filter label { display: block; margin: 0 0 6px; font-size: 12px; }
+.deadline-filter input { display: block; width: 100%; min-width: 0; min-height: 44px; margin-bottom: 12px; padding: 9px; border: 1px solid var(--muted); border-radius: 6px; background: white; color: var(--ink); font: inherit; font-size: 12px; }
+.deadline-filter input[aria-invalid=true] { border-color: #a32727; }
+.deadline-help, .deadline-error { margin: 8px 0 0; font-size: 11px; line-height: 1.5; }
+.deadline-help { color: var(--muted); }
+.deadline-error { color: #a32727; }
 .authority-options { max-height: 264px; overflow-y: auto; margin-top: 10px; }
 .authority-options .check-row { min-height: 44px; align-items: center; margin: 0; padding: 7px 3px; }
 .authority-options .check-row span, .selected-authorities span { overflow-wrap: anywhere; }
