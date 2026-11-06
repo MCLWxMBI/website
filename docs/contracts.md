@@ -502,3 +502,43 @@ Browser preview performs no writes.
 
 Shared creation types are in `shared/types/admin-opportunity.ts`. This feature
 requires migration 0009 and adds no persisted draft state or public write endpoint.
+
+
+## Admin opportunity export
+
+The Opportunities admin tab has an **Export all opportunities** button. It
+requests authenticated `GET /api/admin/opportunities/export` and downloads
+`echo-opportunities-YYYY-MM-DD.xlsx`, using the Melbourne export date. The
+endpoint uses the existing enabled-admin/session checks and private, no-store
+response policy. Configuration, database, and workbook failures return a generic
+503; authentication failures retain their existing status codes. Failed downloads
+can be retried without leaving the panel.
+
+The export reads every current opportunity from `DATABASE_URL` in one joined
+query, including closed listings and inactive sources. Catalogue filters and
+pagination do not affect it. Rows are ordered by effective UTC submission deadline,
+then opportunity ID. No migration or automatic seeding is involved.
+
+The **Opportunities** worksheet contains: Title, Publishing organisation,
+Jurisdiction, Source ID, Source name, Index URL, Official consultation URL,
+Summary, Full text, Opening date/time, Submission deadline, Categories, Source
+tags, and Location. Source metadata and tags come from `website_indexes`;
+publishing organisation retains the opportunity’s stored name. Location uses a
+nonblank location label, falling back to jurisdiction. Missing optional values are
+blank; paragraphs are separated by two line breaks and category/tag entries by
+one. Opportunity IDs, deadline precision, geometry, internal notes, and scrape
+history are not exported. Empty collections produce a headers-only workbook.
+
+Exact timestamps use `Australia/Melbourne` at the timestamp’s own instant:
+`YYYY-MM-DD HH:mm:ss UTC+10:00` (AEST) or `UTC+11:00` (AEDT), preserving
+nonzero milliseconds. Month-only deadlines remain `YYYY-MM`. Database storage
+remains UTC. Source IDs and all content are literal text cells, including content
+starting with formula characters. Headers are frozen and filterable; cells wrap.
+
+Values exceeding Excel’s 32,767-character or 253-line-feed cell limits are
+preserved in a supplemental **Long values** sheet. The original cell names a
+reference such as `LV-1`; concatenate that reference’s Text entries in numeric
+Part order to recover the complete value. References stay attached to their main
+cells when sorted, and chunks preserve Unicode characters and line breaks.
+ExcelJS runs only on the server; the client downloads a Blob and releases its
+object URL after starting the download.

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AdminWebsiteIndexes from '~/components/AdminWebsiteIndexes.vue'
 import AdminScraper from '~/components/AdminScraper.vue'
+import AdminOpportunityExport from '~/components/AdminOpportunityExport.vue'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useSeoMeta({ title: 'Administration' })
@@ -39,7 +40,10 @@ const pages: { title: string; path: string; editPath: string; description: strin
       <AdminWebsiteIndexes />
     </section>
     <section v-if="selected === 'opportunities'" id="panel-opportunities" aria-labelledby="heading-opportunities">
-      <h2 id="heading-opportunities">Opportunities</h2>
+      <div class="opportunities-heading">
+        <h2 id="heading-opportunities">Opportunities</h2>
+        <AdminOpportunityExport />
+      </div>
       <div class="admin-card">
         <h3>Add a consultation listing</h3>
         <p>Create a listing, review its preview, and publish it to the public catalogue.</p>
@@ -54,3 +58,9 @@ const pages: { title: string; path: string; editPath: string; description: strin
     </section>
   </section>
 </template>
+
+<style scoped>
+.opportunities-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+.opportunities-heading h2 { margin: 0; }
+@media (max-width: 600px) { .opportunities-heading { align-items: flex-start; flex-direction: column; } }
+</style>

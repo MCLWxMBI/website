@@ -15,6 +15,12 @@ function database() {
 // Inject the connection so handlers and isolated database tests share queries.
 export function createOpportunityRepository(db: ReturnType<typeof connectDatabase>['db']) {
   return {
+    async allForExport() {
+      return db.select({ opportunity: opportunities, sourceName: websiteIndexes.name,
+        indexUrl: websiteIndexes.indexUrl, sourceTags: websiteIndexes.tags }).from(opportunities)
+        .innerJoin(websiteIndexes, eq(opportunities.websiteId, websiteIndexes.id))
+        .orderBy(asc(opportunities.submissionDeadline), asc(opportunities.id))
+    },
     async all() {
       return db.select({ opportunity: opportunities, websiteTags: websiteIndexes.tags }).from(opportunities)
         .innerJoin(websiteIndexes, eq(opportunities.websiteId, websiteIndexes.id))
@@ -36,6 +42,10 @@ export function createOpportunityRepository(db: ReturnType<typeof connectDatabas
       return row?.tags ?? null
     }
   }
+}
+
+export const opportunityExportRepository = {
+  allForExport: () => createOpportunityRepository(database()).allForExport()
 }
 
 export const opportunityRepository: OpportunityRepository = {
