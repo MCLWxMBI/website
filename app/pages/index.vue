@@ -12,6 +12,7 @@ import {
   serializeOpportunityAccess
 } from '~/utils/opportunity-access'
 import { getOpportunityAuthorities, matchesOpportunityAuthority, parseOpportunityAuthorities, serializeOpportunityAuthorities } from '~/utils/opportunity-authority'
+import { matchesSubmissionDeadline, parseSubmissionDeadlineRange, validateSubmissionDeadlineRange } from '~/utils/opportunity-deadline-filter'
 import type { OpportunityAccess } from '~/utils/opportunity-access'
 
 useSeoMeta({ title: 'Consultation opportunities' })
@@ -38,6 +39,15 @@ const selectedJurisdictions = ref<Jurisdiction[]>(validList(value('location'), j
 const selectedCategories = ref<OpportunityCategory[]>(validList(value('category'), opportunityCategories))
 const selectedStatuses = ref<OpportunityStatus[]>(validList(value('status'), opportunityStatuses))
 const selectedAccess = ref<OpportunityAccess[]>(parseOpportunityAccess(value('access')))
+const initialDeadlineRange = parseSubmissionDeadlineRange(route.query.deadlineFrom, route.query.deadlineTo)
+const deadlineDraft = ref({ ...initialDeadlineRange })
+const appliedDeadlineRange = ref({ ...initialDeadlineRange })
+const deadlineInputInvalid = ref({ from: false, to: false })
+const deadlineError = computed(() => deadlineInputInvalid.value.from || deadlineInputInvalid.value.to
+  ? 'Enter valid dates between years 0001 and 9999.'
+  : validateSubmissionDeadlineRange(deadlineDraft.value))
+const hasDeadlineFilter = computed(() => Boolean(appliedDeadlineRange.value.from || appliedDeadlineRange.value.to))
+const hasDeadlineInput = computed(() => Boolean(deadlineDraft.value.from || deadlineDraft.value.to || deadlineError.value))
 const page = ref(Math.max(1, Number(value('page')) || 1))
 
 const queryState = computed<Record<string, string | string[]>>(() => {
@@ -50,12 +60,22 @@ const queryState = computed<Record<string, string | string[]>>(() => {
   if (selectedStatuses.value.length) query.status = selectedStatuses.value.join(',')
   const access = serializeOpportunityAccess(selectedAccess.value)
   if (access) query.access = access
+  if (appliedDeadlineRange.value.from) query.deadlineFrom = appliedDeadlineRange.value.from
+  if (appliedDeadlineRange.value.to) query.deadlineTo = appliedDeadlineRange.value.to
   if (page.value > 1) query.page = String(page.value)
   return query
 })
 
 const syncUrl = () => router.replace({ query: queryState.value })
 const resetPageAndSync = () => { page.value = 1; syncUrl() }
+
+const updateDeadlineRange = (bound: 'from' | 'to', value: string, invalid: boolean) => {
+  deadlineDraft.value = { ...deadlineDraft.value, [bound]: value }
+  deadlineInputInvalid.value = { ...deadlineInputInvalid.value, [bound]: invalid }
+  if (deadlineError.value) return
+  appliedDeadlineRange.value = { ...deadlineDraft.value }
+  resetPageAndSync()
+}
 
 const toggle = <T,>(list: Ref<T[]>, item: T) => {
   list.value = list.value.includes(item)
@@ -76,6 +96,9 @@ const clearFilters = () => {
   selectedCategories.value = []
   selectedStatuses.value = []
   selectedAccess.value = [...defaultOpportunityAccess]
+  deadlineDraft.value = { from: '', to: '' }
+  appliedDeadlineRange.value = { from: '', to: '' }
+  deadlineInputInvalid.value = { from: false, to: false }
   resetPageAndSync()
 }
 
@@ -97,14 +120,15 @@ const filtered = computed(() => {
       && (!selectedCategories.value.length || item.category.some(category => selectedCategories.value.includes(category)))
       && (!selectedStatuses.value.length || selectedStatuses.value.includes(item.status))
       && matchesOpportunityAccess(item, selectedAccess.value)
+      && matchesSubmissionDeadline(item, appliedDeadlineRange.value)
   }))
 })
 
 const pageCount = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))
 const visibleOpportunities = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 const accessIsDefault = computed(() => serializeOpportunityAccess(selectedAccess.value) === undefined)
-const hasAnyFilter = computed(() => Boolean(search.value || selectedAuthorities.value.length || selectedJurisdictions.value.length || selectedCategories.value.length || selectedStatuses.value.length || !accessIsDefault.value))
-const activeFilterCount = computed(() => selectedAuthorities.value.length + selectedJurisdictions.value.length + selectedCategories.value.length + selectedStatuses.value.length + (accessIsDefault.value ? 0 : 1))
+const hasAnyFilter = computed(() => Boolean(search.value || selectedAuthorities.value.length || selectedJurisdictions.value.length || selectedCategories.value.length || selectedStatuses.value.length || !accessIsDefault.value || hasDeadlineInput.value))
+const activeFilterCount = computed(() => selectedAuthorities.value.length + selectedJurisdictions.value.length + selectedCategories.value.length + selectedStatuses.value.length + (accessIsDefault.value ? 0 : 1) + (hasDeadlineFilter.value ? 1 : 0))
 const openOpportunityCount = computed(() => opportunitiesWithStatus.value.filter(item => item.status === 'open').length)
 
 const goToPage = (nextPage: number) => {
@@ -127,6 +151,12 @@ watch([() => route.query, authorities], () => {
   selectedCategories.value = validList(value('category'), opportunityCategories)
   selectedStatuses.value = validList(value('status'), opportunityStatuses)
   selectedAccess.value = parseOpportunityAccess(value('access'))
+  const range = parseSubmissionDeadlineRange(route.query.deadlineFrom, route.query.deadlineTo)
+  if (range.from !== appliedDeadlineRange.value.from || range.to !== appliedDeadlineRange.value.to) {
+    appliedDeadlineRange.value = range
+    deadlineDraft.value = { ...range }
+    deadlineInputInvalid.value = { from: false, to: false }
+  }
   const requestedPage = Math.max(1, Number(value('page')) || 1)
   page.value = requestStatus.value === 'success' ? Math.min(requestedPage, pageCount.value) : requestedPage
 })
@@ -188,6 +218,10 @@ watch(pageCount, (count) => {
               :selected-categories="selectedCategories"
               :selected-statuses="selectedStatuses"
               :selected-access="selectedAccess"
+              :deadline-from="deadlineDraft.from"
+              :deadline-to="deadlineDraft.to"
+              :deadline-error="deadlineError"
+              @update-deadline="updateDeadlineRange"
               @toggle-jurisdiction="toggleJurisdiction"
               @toggle-category="toggleCategory"
               @toggle-status="toggleStatus"
@@ -236,6 +270,10 @@ watch(pageCount, (count) => {
           :selected-categories="selectedCategories"
           :selected-statuses="selectedStatuses"
           :selected-access="selectedAccess"
+          :deadline-from="deadlineDraft.from"
+          :deadline-to="deadlineDraft.to"
+          :deadline-error="deadlineError"
+          @update-deadline="updateDeadlineRange"
           @toggle-jurisdiction="toggleJurisdiction"
           @toggle-category="toggleCategory"
           @toggle-status="toggleStatus"

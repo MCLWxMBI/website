@@ -139,6 +139,16 @@ and CSRF protection. Notes never enter the public response.
 deadline ascending and ID ascending. It returns the complete collection; the
 frontend applies search, filters and pagination. An empty database returns `[]`.
 
+The homepage accepts optional `deadlineFrom` and `deadlineTo` query parameters
+in canonical `YYYY-MM-DD` format (years 0001–9999). Bounds are inclusive UTC
+calendar days; the upper bound compares strictly before the next UTC midnight.
+Month-only submission deadlines compare as the first day of their month.
+Missing bounds are unrestricted. Malformed/repeated values or reversed URL
+ranges are ignored as a whole, without changing other filter parameters.
+Accepted changes reset pagination to page 1; filtering precedes deadline/ID
+sorting and pagination. Invalid form inputs keep the last valid range applied.
+The date range is frontend state; API endpoints and database storage are unchanged.
+
 `GET /api/opportunities/:id` returns:
 
 ~~~ts

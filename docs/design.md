@@ -85,7 +85,7 @@ columns. The grid falls to two columns below 1050px. Below 760px, cards use one
 column and filters move into a right-side modal drawer.
 
 Search covers titles, summaries, publishers, jurisdictions, categories, and
-shared source tags. Filters cover location, category, status, and access. The Access
+shared source tags. Filters cover location, category, submission deadline, status, and access. The Access
 group contains Public and Invite-only checkboxes; both are selected by default.
 An opportunity is Invite-only when its source carries the canonical `Invite-only` tag,
 and every other opportunity is Public. Clearing filters restores both access
@@ -99,6 +99,14 @@ Filtered results sort by effective deadline ascending before pagination, with
 opportunity ID ascending to break ties. Search and filter state is encoded
 in URL query parameters so views can be shared and restored. Empty results must
 explain what happened and provide a clear reset action.
+
+The Submission deadline section has optional From and To dates shared by the
+desktop sidebar and mobile drawer. Valid changes apply immediately and reset
+pagination. Both days are included in UTC, with month-only deadlines compared
+at the first day of the month. Invalid inputs or reversed ranges show inline
+validation while the last valid range stays applied. Clear all resets the dates;
+a range counts as one active filter. URLs use `deadlineFrom=YYYY-MM-DD` and
+`deadlineTo=YYYY-MM-DD`; refresh, navigation, and detail return links preserve them.
 
 ### About
 
