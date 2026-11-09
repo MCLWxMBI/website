@@ -95,8 +95,18 @@ server-synchronised UTC time: an opportunity is closed at or after its
 submission deadline, upcoming before a supplied start time, and open otherwise.
 A missing start time defaults to open until the deadline. Month-only deadlines
 close at midnight UTC on the first day of the month and display without a day.
-Filtered results sort by effective deadline ascending before pagination, with
-opportunity ID ascending to break ties. Search and filter state is encoded
+
+The catalogue shows up to 12 opportunities per page: four rows of three on
+desktop, with the existing two-column tablet and single-column mobile layouts.
+The final page can contain fewer opportunities.
+
+Upcoming is unchecked by default; Open now and Closed are checked. Clearing
+filters restores these choices. Results group Upcoming → Open now → Closed,
+with effective closing dates ascending and opportunity IDs ascending within
+each group, before pagination. Month-only deadlines retain the first-day UTC
+rule. Non-default status choices are preserved in the URL; selecting no statuses
+uses `status=none` and shows no results. Default status choices count as no active
+filter; any changed status selection counts as one. Search and filter state is encoded
 in URL query parameters so views can be shared and restored. Empty results must
 explain what happened and provide a clear reset action.
 

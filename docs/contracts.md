@@ -145,7 +145,7 @@ calendar days; the upper bound compares strictly before the next UTC midnight.
 Month-only submission deadlines compare as the first day of their month.
 Missing bounds are unrestricted. Malformed/repeated values or reversed URL
 ranges are ignored as a whole, without changing other filter parameters.
-Accepted changes reset pagination to page 1; filtering precedes deadline/ID
+Accepted changes reset pagination to page 1; filtering precedes status/deadline/ID
 sorting and pagination. Invalid form inputs keep the last valid range applied.
 The date range is frontend state; API endpoints and database storage are unchanged.
 
@@ -238,8 +238,17 @@ Equality at `startDate` means open; equality at `submissionDeadline` means
 closed. Comparisons use UTC instants. For a month-only deadline such as `2026-11`,
 closing occurs at `2026-11-01T00:00:00Z`, not at the end of November.
 
-The catalogue sorts filtered results by effective deadline ascending before
-pagination, across all statuses, with opportunity ID ascending as the tie-breaker.
+The catalogue groups filtered results Upcoming → Open → Closed before
+pagination. Within each group, effective deadlines sort ascending, with
+opportunity ID ascending as the tie-breaker. It shows up to 12 results per page.
+By default, only Open and Closed are selected; Upcoming is opt-in. Clearing
+filters restores these defaults. The homepage `status` query accepts a
+comma-separated selection of `upcoming`, `open`, and `closed`; `status=none`
+selects nothing. Missing, empty, malformed/repeated, or wholly unknown values
+use the default selection. Non-default choices are serialized in status order,
+and default Open/Closed choices omit the parameter. Status filtering and grouping
+use the server-synchronized time and do not restrict the collection API or XLSX
+export, which retain their existing chronological order.
 Month-only values display as “Nov 2026” on cards and “November 2026” on detail
 pages; exact deadlines and opening dates retain their full-date display.
 

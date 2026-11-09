@@ -3,6 +3,7 @@ import { jurisdictions, opportunityCategories, opportunityStatuses } from '~/typ
 import type { Jurisdiction, OpportunityCategory, OpportunityStatus } from '~/types/opportunity'
 import type { OpportunityAccess } from '~/utils/opportunity-access'
 import { searchOpportunityAuthorities } from '~/utils/opportunity-authority'
+import { serializeOpportunityStatuses } from '~/utils/opportunity-status'
 
 const authoritySearch = ref('')
 const deadlineId = useId()
@@ -39,7 +40,8 @@ function changeDeadline(bound: 'from' | 'to', event: Event) {
 const statusLabels: Record<OpportunityStatus, string> = { open: 'Open now', upcoming: 'Upcoming', closed: 'Closed' }
 const accessLabels: Record<OpportunityAccess, string> = { public: 'Public', 'invite-only': 'Invite-only' }
 const accessValues: OpportunityAccess[] = ['public', 'invite-only']
-const hasFilters = computed(() => props.selectedAuthorities.length + props.selectedJurisdictions.length + props.selectedCategories.length + props.selectedStatuses.length > 0
+const hasFilters = computed(() => props.selectedAuthorities.length + props.selectedJurisdictions.length + props.selectedCategories.length > 0
+  || serializeOpportunityStatuses(props.selectedStatuses) !== undefined
   || props.selectedAccess.length !== accessValues.length || Boolean(props.deadlineFrom || props.deadlineTo || props.deadlineError))
 </script>
 
