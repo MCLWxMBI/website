@@ -81,7 +81,7 @@ describe('deadline status', () => {
   })
 })
 
-describe('chronological catalogue order', () => {
+describe('chronological deadline ordering', () => {
   it('sorts mixed formats across statuses before pagination without mutating the input', () => {
     const input = Object.freeze([
       { id: 'last', submissionDeadline: '2027-02-02T00:00:00Z', status: 'upcoming' },

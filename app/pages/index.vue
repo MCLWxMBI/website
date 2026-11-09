@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { sortOpportunitiesByDeadline } from '~~/shared/utils/opportunity-deadline'
+import { defaultOpportunityStatuses, parseOpportunityStatuses, serializeOpportunityStatuses, sortOpportunitiesByStatus } from '~/utils/opportunity-status'
 import { toOpportunity } from '~~/shared/utils/opportunity'
 import type { OpportunitiesResponse } from '~~/shared/types/opportunity'
-import { jurisdictions, opportunityCategories, opportunityStatuses } from '~/types/opportunity'
+import { jurisdictions, opportunityCategories } from '~/types/opportunity'
 import type { Jurisdiction, OpportunityCategory, OpportunityStatus } from '~/types/opportunity'
 import {
   defaultOpportunityAccess,
@@ -25,7 +25,7 @@ const { currentTime } = await useServerTime()
 
 const route = useRoute()
 const router = useRouter()
-const pageSize = 6
+const pageSize = 12
 const mobileFiltersOpen = ref(false)
 
 const value = (key: string) => typeof route.query[key] === 'string' ? route.query[key] as string : ''
@@ -37,7 +37,7 @@ const selectedAuthorities = ref(parseOpportunityAuthorities(route.query.authorit
 const search = ref(value('q'))
 const selectedJurisdictions = ref<Jurisdiction[]>(validList(value('location'), jurisdictions))
 const selectedCategories = ref<OpportunityCategory[]>(validList(value('category'), opportunityCategories))
-const selectedStatuses = ref<OpportunityStatus[]>(validList(value('status'), opportunityStatuses))
+const selectedStatuses = ref<OpportunityStatus[]>(parseOpportunityStatuses(route.query.status))
 const selectedAccess = ref<OpportunityAccess[]>(parseOpportunityAccess(value('access')))
 const initialDeadlineRange = parseSubmissionDeadlineRange(route.query.deadlineFrom, route.query.deadlineTo)
 const deadlineDraft = ref({ ...initialDeadlineRange })
@@ -57,7 +57,8 @@ const queryState = computed<Record<string, string | string[]>>(() => {
   if (selectedCategories.value.length) query.category = selectedCategories.value.join(',')
   const authority = serializeOpportunityAuthorities(selectedAuthorities.value)
   if (authority) query.authority = authority
-  if (selectedStatuses.value.length) query.status = selectedStatuses.value.join(',')
+  const status = serializeOpportunityStatuses(selectedStatuses.value)
+  if (status) query.status = status
   const access = serializeOpportunityAccess(selectedAccess.value)
   if (access) query.access = access
   if (appliedDeadlineRange.value.from) query.deadlineFrom = appliedDeadlineRange.value.from
@@ -94,7 +95,7 @@ const clearFilters = () => {
   selectedAuthorities.value = []
   selectedJurisdictions.value = []
   selectedCategories.value = []
-  selectedStatuses.value = []
+  selectedStatuses.value = [...defaultOpportunityStatuses]
   selectedAccess.value = [...defaultOpportunityAccess]
   deadlineDraft.value = { from: '', to: '' }
   appliedDeadlineRange.value = { from: '', to: '' }
@@ -113,12 +114,12 @@ const opportunitiesWithStatus = computed(() => opportunities.value.map(opportuni
 })))
 
 const filtered = computed(() => {
-  return sortOpportunitiesByDeadline(opportunitiesWithStatus.value.filter((item) => {
+  return sortOpportunitiesByStatus(opportunitiesWithStatus.value.filter((item) => {
     return matchesOpportunitySearch(item, search.value)
       && matchesOpportunityAuthority(item, selectedAuthorities.value)
       && (!selectedJurisdictions.value.length || selectedJurisdictions.value.includes(item.jurisdiction))
       && (!selectedCategories.value.length || item.category.some(category => selectedCategories.value.includes(category)))
-      && (!selectedStatuses.value.length || selectedStatuses.value.includes(item.status))
+      && selectedStatuses.value.includes(item.status)
       && matchesOpportunityAccess(item, selectedAccess.value)
       && matchesSubmissionDeadline(item, appliedDeadlineRange.value)
   }))
@@ -127,8 +128,9 @@ const filtered = computed(() => {
 const pageCount = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))
 const visibleOpportunities = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 const accessIsDefault = computed(() => serializeOpportunityAccess(selectedAccess.value) === undefined)
-const hasAnyFilter = computed(() => Boolean(search.value || selectedAuthorities.value.length || selectedJurisdictions.value.length || selectedCategories.value.length || selectedStatuses.value.length || !accessIsDefault.value || hasDeadlineInput.value))
-const activeFilterCount = computed(() => selectedAuthorities.value.length + selectedJurisdictions.value.length + selectedCategories.value.length + selectedStatuses.value.length + (accessIsDefault.value ? 0 : 1) + (hasDeadlineFilter.value ? 1 : 0))
+const statusesAreDefault = computed(() => serializeOpportunityStatuses(selectedStatuses.value) === undefined)
+const hasAnyFilter = computed(() => Boolean(search.value || selectedAuthorities.value.length || selectedJurisdictions.value.length || selectedCategories.value.length || !statusesAreDefault.value || !accessIsDefault.value || hasDeadlineInput.value))
+const activeFilterCount = computed(() => selectedAuthorities.value.length + selectedJurisdictions.value.length + selectedCategories.value.length + (statusesAreDefault.value ? 0 : 1) + (accessIsDefault.value ? 0 : 1) + (hasDeadlineFilter.value ? 1 : 0))
 const openOpportunityCount = computed(() => opportunitiesWithStatus.value.filter(item => item.status === 'open').length)
 
 const goToPage = (nextPage: number) => {
@@ -149,7 +151,7 @@ watch([() => route.query, authorities], () => {
   selectedAuthorities.value = parseOpportunityAuthorities(route.query.authority, authorities.value)
   selectedJurisdictions.value = validList(value('location'), jurisdictions)
   selectedCategories.value = validList(value('category'), opportunityCategories)
-  selectedStatuses.value = validList(value('status'), opportunityStatuses)
+  selectedStatuses.value = parseOpportunityStatuses(route.query.status)
   selectedAccess.value = parseOpportunityAccess(value('access'))
   const range = parseSubmissionDeadlineRange(route.query.deadlineFrom, route.query.deadlineTo)
   if (range.from !== appliedDeadlineRange.value.from || range.to !== appliedDeadlineRange.value.to) {

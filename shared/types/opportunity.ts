@@ -1,4 +1,4 @@
-export const opportunityStatuses = ['open', 'upcoming', 'closed'] as const
+export const opportunityStatuses = ['upcoming', 'open', 'closed'] as const
 export type OpportunityStatus = typeof opportunityStatuses[number]
 
 export const jurisdictions = ['Commonwealth', 'Victoria'] as const
