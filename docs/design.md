@@ -292,3 +292,16 @@ Sessions expire 24 hours after login without sliding renewal. Login redirects
 authenticated administrators to the index; protected navigation redirects missing
 or expired sessions to login. Authentication service failures show an unavailable
 state. Admin pages are private, non-cacheable, and excluded from indexing.
+
+
+The Scraper panel has Sources and Runs navigation. Sources remains mounted
+while Runs is visible, preserving drafts and leave-panel protections. Runs has
+status-filtered, newest-first history and a separate detail view. Run details
+show historical source names and URLs, all recorded counters, plain-text errors,
+and expandable saved titles. Filters affect the visible source/title matches,
+while totals always cover the full run. Titles are display text, not listing links.
+Run status is displayed as recorded, including running snapshots with no results.
+Times are labelled Melbourne time. Polling runs only while visible and retains
+last loaded data on refresh errors. Loading, empty, invalid/missing, authorization,
+and retryable failure states remain distinct. The development SQL seed includes
+six illustrative run snapshots; runtime components contain no mock records.

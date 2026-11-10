@@ -4,7 +4,7 @@ import { runSeed } from '../../scripts/seed-database'
 describe('development seed runner', () => {
   it('ignores DATABASE_URL, runs one transaction, reports counts, and closes the fixed development connection', async () => {
     vi.stubEnv('DATABASE_URL', 'postgresql://production.example/prod')
-    const result = { seeded: 12, skipped: 0, history: 12 }
+    const result = { seeded: 12, skipped: 0, history: 12, runsSeeded: 6, runsSkipped: 0 }
     const simple = vi.fn().mockResolvedValue([[], [], [result]])
     const unsafe = vi.fn(() => ({ simple }))
     const begin = vi.fn(async callback => callback({ unsafe }))
@@ -16,7 +16,8 @@ describe('development seed runner', () => {
       expect(connect).toHaveBeenCalledWith('postgresql://echo:echo@postgres:5432/echo')
       expect(begin).toHaveBeenCalledOnce()
       expect(unsafe).toHaveBeenCalledWith(expect.stringContaining('CREATE TEMP TABLE opportunity_seed'))
-      expect(log).toHaveBeenLastCalledWith('Seeded 12 opportunities and 12 history records; skipped 0 deleted URLs.')
+      expect(log).toHaveBeenCalledWith('Seeded 12 opportunities and 12 history records; skipped 0 deleted URLs.')
+      expect(log).toHaveBeenLastCalledWith('Seeded 6 scraper runs; skipped 0 existing run fixtures.')
       expect(end).toHaveBeenCalledOnce()
     } finally { vi.unstubAllEnvs() }
   })
