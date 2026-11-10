@@ -53,7 +53,7 @@ describe('category catalogue migration and seeds', () => {
     expect(await connection.db.select().from(opportunities)).toEqual(existing.opportunities)
     expect(await connection.db.select().from(articleHistory)).toEqual(existing.history)
     expect(await connection.db.select().from(websiteIndexes)).toEqual(existing.sources)
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(10)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(11)
   })
   it.each(['root', 'development'])('%s seed inserts every current filter category and preserves IDs and extra rows on rerun', async seed => {
     await connection.db.insert(categories).values({ name: 'Additional category' })

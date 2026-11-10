@@ -117,11 +117,11 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
   it('records the migration once and preserves the existing schema and data', async () => {
     const tables = await connection.client`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`
     expect(tables.map(row => row.table_name)).toEqual([
-      'article_history', 'categories', 'opportunities', 'static_pages', 'users', 'website_indexes'
+      'article_history', 'categories', 'opportunities', 'scraper_runs', 'static_pages', 'users', 'website_indexes'
     ])
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(10)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(11)
     await migrate(connection.db, { migrationsFolder: './drizzle' })
-    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(10)
+    expect(await connection.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(11)
     if (scenario !== 'fresh') {
       expect((await connection.db.select().from(users))[0]?.username).toBe('existing-admin')
       expect((await connection.db.select().from(staticPages))[0]?.contentHtml).toBe('<h1>Existing page</h1>')

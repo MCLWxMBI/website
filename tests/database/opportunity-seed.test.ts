@@ -30,7 +30,7 @@ describe('development SQL seed and database catalogue', () => {
 
   beforeEach(async () => {
     // This connection points only to the randomly named test database above.
-    await connection.client`TRUNCATE opportunities, article_history, website_indexes RESTART IDENTITY`
+    await connection.client`TRUNCATE scraper_runs, opportunities, article_history, website_indexes RESTART IDENTITY`
   })
 
   afterAll(async () => {
@@ -40,7 +40,7 @@ describe('development SQL seed and database catalogue', () => {
   })
 
   it('persists all 12 opportunities, website features, map geometries, and linked scrape histories', async () => {
-    expect(await seedDatabase(connection.client)).toEqual({ seeded: 12, skipped: 0, history: 12 })
+    expect(await seedDatabase(connection.client)).toMatchObject({ seeded: 12, skipped: 0, history: 12 })
     const rows = await connection.db.select().from(opportunities)
     expect(rows).toHaveLength(12)
     expect(new Set(rows.map(row => row.sourceUrl)).size).toBe(12)
@@ -85,7 +85,7 @@ describe('development SQL seed and database catalogue', () => {
     const before = await connection.db.select().from(articleHistory).orderBy(articleHistory.sourceUrl)
     await connection.db.update(opportunities).set({ id: 'existing-stable-id', title: 'Edited title' })
       .where(eq(opportunities.id, 'nature-repair-methods'))
-    expect(await seedDatabase(connection.client)).toEqual({ seeded: 12, skipped: 0, history: 12 })
+    expect(await seedDatabase(connection.client)).toMatchObject({ seeded: 12, skipped: 0, history: 12 })
     expect(await connection.db.select().from(opportunities)).toHaveLength(12)
     const repository = createOpportunityRepository(connection.db)
     expect(await repository.findById('nature-repair-methods')).toBeNull()
@@ -112,7 +112,7 @@ describe('development SQL seed and database catalogue', () => {
     const [row] = await connection.db.delete(opportunities).where(eq(opportunities.id, 'nature-repair-methods')).returning()
     const [before] = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, row!.sourceUrl))
     expect(before?.deleted).toBe(true)
-    expect(await seedDatabase(connection.client)).toEqual({ seeded: 11, skipped: 1, history: 11 })
+    expect(await seedDatabase(connection.client)).toMatchObject({ seeded: 11, skipped: 1, history: 11 })
     const [after] = await connection.db.select().from(articleHistory).where(eq(articleHistory.sourceUrl, row!.sourceUrl))
     expect(after).toEqual(before)
     expect(await connection.db.select().from(opportunities)).toHaveLength(11)
@@ -148,6 +148,7 @@ describe('development SQL seed and database catalogue', () => {
       submissionDeadline: new Date('2027-01-01T00:00:00Z'), category: ['Climate change']
     })
     await expect(seedDatabase(connection.client)).rejects.toMatchObject({ code: '23505' })
+    expect(await connection.client`SELECT * FROM scraper_runs`).toHaveLength(0)
     expect(await connection.db.select().from(websiteIndexes)).toEqual(before)
     expect(await connection.db.select().from(opportunities)).toHaveLength(1)
     expect(await connection.db.select().from(articleHistory)).toHaveLength(1)

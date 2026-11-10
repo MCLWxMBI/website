@@ -445,6 +445,162 @@ DO $$ BEGIN
   THEN RAISE EXCEPTION 'A seed article is linked to a different source'; END IF;
 END $$;
 
+-- Six synthetic historical run snapshots. Fixed times make reruns idempotent.
+-- Only this logging section writes scraper_runs; it never changes history dates or source tags.
+CREATE TEMP TABLE scraper_run_seed ON COMMIT DROP AS
+WITH fixtures AS (
+  SELECT * FROM jsonb_to_recordset($run_fixtures$
+[
+  {
+    "started_at": "2026-11-01T03:00:00Z",
+    "finished_at": "2026-11-01T03:10:00Z",
+    "status": "passed",
+    "sources": [
+      {
+        "index_url": "https://engage.vic.gov.au/project",
+        "status": "passed",
+        "discovered_count": 4,
+        "processed_count": 3,
+        "passed_count": 2,
+        "invalid_count": 1,
+        "failed_count": 0,
+        "skipped_count": 1,
+        "error": null
+      },
+      {
+        "index_url": "https://consult.dcceew.gov.au/find-consultations",
+        "status": "passed",
+        "discovered_count": 1,
+        "processed_count": 1,
+        "passed_count": 1,
+        "invalid_count": 0,
+        "failed_count": 0,
+        "skipped_count": 0,
+        "error": null
+      }
+    ]
+  },
+  {
+    "started_at": "2026-11-02T03:00:00Z",
+    "finished_at": "2026-11-02T03:05:00Z",
+    "status": "failed",
+    "sources": [
+      {
+        "index_url": "https://engage.vic.gov.au/project",
+        "status": "passed",
+        "discovered_count": 3,
+        "processed_count": 2,
+        "passed_count": 1,
+        "invalid_count": 1,
+        "failed_count": 0,
+        "skipped_count": 1,
+        "error": null
+      },
+      {
+        "index_url": "https://consult.dcceew.gov.au/find-consultations",
+        "status": "failed",
+        "discovered_count": 1,
+        "processed_count": 1,
+        "passed_count": 0,
+        "invalid_count": 0,
+        "failed_count": 1,
+        "skipped_count": 0,
+        "error": "Article extraction failed."
+      }
+    ]
+  },
+  {
+    "started_at": "2026-11-03T03:00:00Z",
+    "finished_at": "2026-11-03T03:00:30Z",
+    "status": "failed",
+    "sources": [
+      {
+        "index_url": "https://engage.vic.gov.au/project",
+        "status": "failed",
+        "discovered_count": 0,
+        "processed_count": 0,
+        "passed_count": 0,
+        "invalid_count": 0,
+        "failed_count": 0,
+        "skipped_count": 0,
+        "error": "Source discovery failed before article processing."
+      }
+    ]
+  },
+  {
+    "started_at": "2026-11-04T03:00:00Z",
+    "finished_at": "2026-11-04T03:02:00Z",
+    "status": "interrupted",
+    "sources": [
+      {
+        "index_url": "https://engage.vic.gov.au/project",
+        "status": "passed",
+        "discovered_count": 2,
+        "processed_count": 1,
+        "passed_count": 1,
+        "invalid_count": 0,
+        "failed_count": 0,
+        "skipped_count": 1,
+        "error": null
+      }
+    ]
+  },
+  {
+    "started_at": "2026-11-05T03:00:00Z",
+    "finished_at": null,
+    "status": "running",
+    "sources": []
+  },
+  {
+    "started_at": "2026-11-06T03:00:00Z",
+    "finished_at": "2026-11-06T03:01:00Z",
+    "status": "passed",
+    "sources": [
+      {
+        "index_url": "https://engage.vic.gov.au/project",
+        "status": "empty",
+        "discovered_count": 0,
+        "processed_count": 0,
+        "passed_count": 0,
+        "invalid_count": 0,
+        "failed_count": 0,
+        "skipped_count": 0,
+        "error": null
+      },
+      {
+        "index_url": "https://consult.dcceew.gov.au/find-consultations",
+        "status": "skipped",
+        "discovered_count": 2,
+        "processed_count": 0,
+        "passed_count": 0,
+        "invalid_count": 0,
+        "failed_count": 0,
+        "skipped_count": 2,
+        "error": null
+      }
+    ]
+  }
+]
+$run_fixtures$::jsonb) AS fixture(started_at timestamptz, finished_at timestamptz, status text, sources jsonb)
+)
+SELECT fixture.started_at, fixture.finished_at, fixture.status,
+  COALESCE((SELECT jsonb_agg((source.value - 'index_url') || jsonb_build_object(
+    'website_index_id', indexes.id, 'source_name', indexes.name, 'source_url', indexes.index_url
+  ) ORDER BY source.position)
+  FROM jsonb_array_elements(fixture.sources) WITH ORDINALITY AS source(value, position)
+  JOIN public.website_indexes indexes ON rtrim(indexes.index_url, '/') = source.value ->> 'index_url'), '[]'::jsonb) AS sources,
+  COALESCE((SELECT jsonb_agg(jsonb_build_object(
+    'website_index_id', indexes.id, 'source_name', indexes.name,
+    'titles', COALESCE((SELECT jsonb_agg(saved.title ORDER BY saved.id) FROM (
+      SELECT seed.id, seed.title FROM opportunity_seed seed
+      WHERE seed.source_index_url = source.value ->> 'index_url'
+      ORDER BY seed.id LIMIT (source.value ->> 'passed_count')::integer
+    ) saved), '[]'::jsonb)
+  ) ORDER BY source.position)
+  FROM jsonb_array_elements(fixture.sources) WITH ORDINALITY AS source(value, position)
+  JOIN public.website_indexes indexes ON rtrim(indexes.index_url, '/') = source.value ->> 'index_url'), '[]'::jsonb) AS extracted_opportunities
+FROM fixtures fixture;
+
 WITH saved AS (
   INSERT INTO public.opportunities (id, title, full_text, source_url, website_id, source_org, jurisdiction, start_date, submission_deadline, submission_deadline_precision, category, summary, location)
   SELECT seed.id, seed.title, seed.full_text, seed.source_url, seed.website_id, seed.source_org, seed.jurisdiction, seed.start_date, seed.submission_deadline, seed.submission_deadline_precision, seed.category, seed.summary, seed.location
@@ -474,7 +630,19 @@ WITH saved AS (
   FROM saved JOIN opportunity_seed AS seed USING (source_url)
   WHERE history.source_url = saved.source_url AND NOT history.deleted
   RETURNING history.source_url
+), seeded_runs AS (
+  INSERT INTO public.scraper_runs (started_at, finished_at, status, sources, extracted_opportunities)
+  SELECT seed.started_at, seed.finished_at, seed.status, seed.sources, seed.extracted_opportunities
+  FROM scraper_run_seed seed WHERE NOT EXISTS (
+    SELECT 1 FROM public.scraper_runs existing WHERE existing.started_at = seed.started_at
+      AND existing.finished_at IS NOT DISTINCT FROM seed.finished_at
+      AND existing.status = seed.status AND existing.sources = seed.sources
+      AND existing.extracted_opportunities = seed.extracted_opportunities
+  ) ORDER BY seed.started_at
+  RETURNING id
 )
 SELECT (SELECT count(*) FROM saved)::integer AS seeded,
        ((SELECT count(*) FROM opportunity_seed) - (SELECT count(*) FROM saved))::integer AS skipped,
-       (SELECT count(*) FROM remembered)::integer AS history;
+       (SELECT count(*) FROM remembered)::integer AS history,
+       (SELECT count(*) FROM seeded_runs)::integer AS "runsSeeded",
+       ((SELECT count(*) FROM scraper_run_seed) - (SELECT count(*) FROM seeded_runs))::integer AS "runsSkipped";

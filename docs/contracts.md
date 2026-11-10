@@ -551,3 +551,28 @@ Part order to recover the complete value. References stay attached to their main
 cells when sorted, and chunks preserve Unicode characters and line breaks.
 ExcelJS runs only on the server; the client downloads a Blob and releases its
 object URL after starting the download.
+
+
+## Admin scraper run logs
+
+Enabled administrators can read `GET /api/admin/scraper/runs` with optional
+`status=running|passed|failed|interrupted` and positive `page` (default 1).
+The response is `{ items, total, page, pageSize: 25 }`, ordered by
+`started_at DESC, id DESC`; out-of-range pages clamp to the last available page.
+Each item contains `id`, UTC `startedAt`, nullable UTC `finishedAt`, `status`,
+`sourceCount`, and `totals` containing `discoveredCount`, `processedCount`,
+`passedCount`, `invalidCount`, `failedCount`, and `skippedCount`.
+
+`GET /api/admin/scraper/runs/:id` returns the summary plus `sources` and
+`extractedOpportunities`. Source properties use camelCase: `websiteIndexId`,
+`sourceName`, `sourceUrl`, `status`, the six counters, and nullable `error`.
+Title groups contain `websiteIndexId`, `sourceName`, and `titles`. Match groups
+by ID, preserve duplicate titles, and display stored names/URLs without registry
+joins. IDs are decimal strings in responses; JSON source IDs are converted to
+text in SQL before JavaScript decodes them. Stored JSON remains unchanged.
+
+Both endpoints use `DATABASE_URL`, existing enabled-admin/session checks, and
+private/no-store caching. Invalid query values or IDs return 400, missing runs
+404, and configuration/database/malformed-log failures generic 503. Empty run
+collections and empty JSON arrays are valid. No new write endpoint is provided.
+The fixed table and JSON contract are documented in [scraper-runs.md](scraper-runs.md).

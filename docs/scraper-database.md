@@ -211,7 +211,7 @@ Treat canonical URL changes as identity changes requiring deliberate handling;
 the triggers do not infer URL aliases or redirects.
 
 `TRUNCATE` bypasses row deletion triggers. The full reset command intentionally
-clears opportunities and article history together, along with the other app data.
+clears opportunities, article history, and run logs together, along with the other app data.
 Page-only resets leave all scraper data and deletion suppression intact. Neither
 reset is a verification step.
 
@@ -252,3 +252,10 @@ The seed follows history-first locking, preserves existing IDs on URL conflicts,
 and skips deletion markers without clearing them. Unrelated rows remain intact.
 It runs as one transaction and does not insert users or static pages. The root
 registry seed remains separate and preserves existing feature tags on reruns.
+
+
+## Scraper run logs
+
+Migration 0010 creates the fixed `scraper_runs` table. Run logging is independent
+of article history and source metadata; it never updates history dates or source
+tags. Read [scraper-runs.md](scraper-runs.md) for the writer contract and admin views.

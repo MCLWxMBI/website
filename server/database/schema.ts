@@ -126,3 +126,15 @@ export type OpportunityRecord = typeof opportunities.$inferSelect
 export type NewOpportunity = typeof opportunities.$inferInsert
 export type ArticleHistory = typeof articleHistory.$inferSelect
 export type NewArticleHistory = typeof articleHistory.$inferInsert
+
+// Scraper-owned historical snapshots. Deliberately no relationships or extra constraints.
+export const scraperRuns = pgTable('scraper_runs', {
+  id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp('finished_at', { withTimezone: true }),
+  status: text('status').notNull().default('running'),
+  sources: jsonb('sources').notNull().default(sql`'[]'::jsonb`),
+  extractedOpportunities: jsonb('extracted_opportunities').notNull().default(sql`'[]'::jsonb`)
+})
+
+export type ScraperRunRecord = typeof scraperRuns.$inferSelect
