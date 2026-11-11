@@ -69,6 +69,25 @@ NUXT_SESSION_PASSWORD=replace-with-a-random-string-at-least-32-characters-long
 The real `.env` file is ignored by Git. Do not commit database credentials or
 the session password.
 
+### Schema ownership
+
+**All database schema creation and changes must always be done in this website
+repository, never in the scraper or any other repository.** This applies to
+development and production, including tables, columns, types, constraints,
+indexes, sequences, database functions, and triggers. The authoritative schema
+is `server/database/schema.ts`, backed by the reviewed `drizzle/` migration
+history. Generate, review, and apply schema migrations from this checkout.
+
+Other repositories consume the resulting schema and perform runtime data reads
+and writes. Do not use the scraper's `setup-db`, copied `sql/schema.sql`, or
+another repository's migration scripts to create or upgrade ECHO databases.
+Apply the required website migration first, then update/deploy the scraper or
+other consumers to match. Existing migration files and snapshots stay unchanged.
+
+See [Scraper-to-website integration](docs/integrations.md) for the complete source
+selection, extraction, transactional persistence, run logging, and website-read
+flow, including current differences between the repositories.
+
 ### Choose a database and run migrations
 
 Except for `db:seed`, database commands display an interactive list of project-root

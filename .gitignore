@@ -27,5 +27,4 @@ logs
 .netlify
 
 # Others
-*.pdf
 *.docx
