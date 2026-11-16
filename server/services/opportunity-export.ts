@@ -1,3 +1,4 @@
+import { formatMelbourneDateTime, melbourneDateKey } from '../../shared/utils/melbourne-time'
 import ExcelJS from 'exceljs'
 import { createError } from 'h3'
 import type { OpportunityRecord } from '../database/schema'
@@ -14,23 +15,8 @@ export interface OpportunityExportRepository {
   allForExport(): Promise<OpportunityExportRow[]>
 }
 
-const melbourne = new Intl.DateTimeFormat('en-AU', {
-  timeZone: 'Australia/Melbourne', calendar: 'gregory', numberingSystem: 'latn',
-  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
-  minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZoneName: 'longOffset'
-})
-
-function dateParts(value: Date) {
-  const parts = Object.fromEntries(melbourne.formatToParts(value).map(part => [part.type, part.value]))
-  return { date: `${parts.year!.padStart(4, '0')}-${parts.month}-${parts.day}`,
-    time: `${parts.hour}:${parts.minute}:${parts.second}`,
-    offset: parts.timeZoneName!.replace('GMT', 'UTC') }
-}
-
 export function formatExportTimestamp(value: Date): string {
-  const { date, time, offset } = dateParts(value)
-  const milliseconds = value.getUTCMilliseconds()
-  return `${date} ${time}${milliseconds ? `.${String(milliseconds).padStart(3, '0')}` : ''} ${offset}`
+  return formatMelbourneDateTime(value.toISOString(), 'numeric')
 }
 
 // Excel limits each cell to 32,767 UTF-16 characters and 253 line feeds.
@@ -105,7 +91,7 @@ export async function createOpportunityWorkbook(rows: OpportunityExportRow[]): P
 export async function exportOpportunities(repository: OpportunityExportRepository, now = new Date()) {
   try {
     const buffer = await createOpportunityWorkbook(await repository.allForExport())
-    return { buffer, filename: `echo-opportunities-${dateParts(now).date}.xlsx` }
+    return { buffer, filename: `echo-opportunities-${melbourneDateKey(now)}.xlsx` }
   } catch {
     throw createError({ statusCode: 503, statusMessage: 'Opportunity export is temporarily unavailable. Please try again.' })
   }

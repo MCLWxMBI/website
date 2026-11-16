@@ -53,7 +53,7 @@ describe('status-first catalogue order', () => {
     const input = Object.freeze([...records])
     const sorted = sortOpportunitiesByStatus(input)
     expect(sorted.map(row => row.id)).toEqual([
-      'upcoming-sooner', 'upcoming-later', 'open-sooner', 'open-a-exact', 'open-b-month', 'closed-month', 'closed-exact'
+      'upcoming-sooner', 'upcoming-later', 'open-sooner', 'open-b-month', 'open-a-exact', 'closed-month', 'closed-exact'
     ])
     expect(input).toEqual(records)
     expect(sorted).not.toBe(input)
@@ -62,7 +62,7 @@ describe('status-first catalogue order', () => {
   it('shows only Open then Closed by default; no selected statuses gives no results', () => {
     const filtered = (selected: readonly OpportunityStatus[]) => sortOpportunitiesByStatus(records.filter(row => selected.includes(row.status)))
     expect(filtered(defaultOpportunityStatuses).map(row => row.id))
-      .toEqual(['open-sooner', 'open-a-exact', 'open-b-month', 'closed-month', 'closed-exact'])
+      .toEqual(['open-sooner', 'open-b-month', 'open-a-exact', 'closed-month', 'closed-exact'])
     expect(filtered(parseOpportunityStatuses('none'))).toEqual([])
   })
 

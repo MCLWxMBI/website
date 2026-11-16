@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { melbourneTimeChoices } from '~~/shared/utils/melbourne-time'
+import { melbourneTimeChoices, melbourneTimeZoneName } from '~~/shared/utils/melbourne-time'
 const props = defineProps<{ id: string; label: string; required?: boolean; invalid?: boolean }>()
 const date = defineModel<string>('date', { required: true })
 const time = defineModel<string>('time', { required: true })
@@ -21,7 +21,7 @@ watch([date, time], () => { occurrence.value = '' })
       <label :for="`${id}-occurrence`">{{ label }} time occurrence (required)</label>
       <select :id="`${id}-occurrence`" v-model="occurrence" required :aria-invalid="invalid">
         <option value="" disabled>Choose which occurrence</option>
-        <option v-for="(choice, index) in choices" :key="choice.utc" :value="choice.utc">{{ index === 0 ? 'First occurrence' : 'Second occurrence' }} ({{ choice.offset }})</option>
+        <option v-for="(choice, index) in choices" :key="choice.utc" :value="choice.utc">{{ index === 0 ? 'First occurrence' : 'Second occurrence' }} ({{ melbourneTimeZoneName(choice.utc) }})</option>
       </select>
       <p>This time occurs twice when clocks go back. Select the occurrence intended by the publisher.</p>
     </template>

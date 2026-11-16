@@ -1,4 +1,5 @@
 import { and, asc, eq, sql } from 'drizzle-orm'
+import { effectiveSubmissionDeadline } from './opportunity-deadline-sql'
 import { connectDatabase } from '../database'
 import { articleHistory, opportunities, websiteIndexes } from '../database/schema'
 import type { OpportunityRepository } from '../services/opportunities'
@@ -23,13 +24,13 @@ export function createOpportunityRepository(db: ReturnType<typeof connectDatabas
         indexUrl: websiteIndexes.indexUrl, sourceTags: websiteIndexes.tags }).from(opportunities)
         .innerJoin(websiteIndexes, eq(opportunities.websiteId, websiteIndexes.id))
         .where(published)
-        .orderBy(asc(opportunities.submissionDeadline), asc(opportunities.id))
+        .orderBy(asc(effectiveSubmissionDeadline), asc(opportunities.id))
     },
     async all() {
       return db.select({ opportunity: opportunities, websiteTags: websiteIndexes.tags }).from(opportunities)
         .innerJoin(websiteIndexes, eq(opportunities.websiteId, websiteIndexes.id))
         .where(published)
-        .orderBy(asc(opportunities.submissionDeadline), asc(opportunities.id))
+        .orderBy(asc(effectiveSubmissionDeadline), asc(opportunities.id))
     },
     async findDetailById(id: string) {
       const [row] = await db.select({ opportunity: opportunities, websiteTags: websiteIndexes.tags })

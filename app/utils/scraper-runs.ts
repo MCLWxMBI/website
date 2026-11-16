@@ -1,8 +1,9 @@
+import { formatMelbourneDateTime } from '~~/shared/utils/melbourne-time'
 import type { ScraperRunSummary, ScraperRunDetail } from '../../shared/types/admin-scraper-runs'
 
 export function formatScraperRunTime(value: string | null): string {
   if (!value) return 'Not recorded'
-  return new Intl.DateTimeFormat('en-AU', { timeZone: 'Australia/Melbourne', dateStyle: 'medium', timeStyle: 'long' }).format(new Date(value))
+  return formatMelbourneDateTime(value)
 }
 
 export function scraperRunDuration(run: Pick<ScraperRunSummary, 'startedAt' | 'finishedAt' | 'status'>, now: number): string {

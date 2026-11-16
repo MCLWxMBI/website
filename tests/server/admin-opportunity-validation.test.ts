@@ -47,8 +47,8 @@ describe('manual opportunity validation', () => {
     }
   })
   it('enforces the first-day deadline comparison for month-only values', () => {
-    expect(() => validateCreateOpportunity(makeCreateOpportunity({ submissionDeadline: '2027-11', startDate: '2027-11-01T00:00:00Z' }))).not.toThrow()
-    expect(() => validateCreateOpportunity(makeCreateOpportunity({ submissionDeadline: '2027-11', startDate: '2027-11-01T00:00:01Z' }))).toThrow('Opening')
+    expect(() => validateCreateOpportunity(makeCreateOpportunity({ submissionDeadline: '2027-11', startDate: '2027-10-31T13:00:00Z' }))).not.toThrow()
+    expect(() => validateCreateOpportunity(makeCreateOpportunity({ submissionDeadline: '2027-11', startDate: '2027-10-31T13:00:01Z' }))).toThrow('Opening')
   })
   it('accepts bounded points in longitude/latitude order, including zero', () => {
     for (const coordinates of [[0, 0], [-180, -90], [180, 90]]) {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMelbourneDateTime } from '~~/shared/utils/melbourne-time'
 import type { AdminScraperSourcesResponse } from '~~/shared/types/admin-scraper'
 import {
   buildScraperSourceUpdates, createScraperSnapshot, isScraperTab, parseScraperSnapshot,
@@ -33,7 +34,7 @@ const sourceName = computed(() => sourceKey.value === 'unassigned'
   ? 'Unassigned articles'
   : data.value?.sources.find(source => source.id === sourceKey.value)?.name ?? 'Source articles')
 const backupTime = computed(() => backup.value
-  ? new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(backup.value.capturedAt)) : '')
+  ? formatMelbourneDateTime(backup.value.capturedAt) : '')
 
 function loadRows(result: AdminScraperSourcesResponse) {
   const state = reconcileScraperSourceMode(result.sources, mode.value)

@@ -26,7 +26,7 @@ const tags = computed(() => getOpportunityTagGroups(opportunity.value))
       <template v-if="opportunity.startDate"><dt>Opens</dt><dd>{{ formatOpportunityDateTime(opportunity.startDate) }}</dd></template>
       <dt>Closes</dt><dd>{{ formatOpportunityDateTime(opportunity.submissionDeadline) }}</dd>
     </dl>
-    <p v-if="opportunity.submissionDeadline.length === 7">Month-only deadlines close at midnight UTC on the first day of that month.</p>
+    <p v-if="opportunity.submissionDeadline.length === 7">Month-only deadlines close at midnight Melbourne time on the first day of that month.</p>
     <h3>Website features</h3>
     <ul v-if="websiteTags.length"><li v-for="tag in websiteTags" :key="tag">{{ tag }}</li></ul>
     <p v-else>No website features supplied.</p>

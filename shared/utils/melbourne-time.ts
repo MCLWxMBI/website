@@ -5,6 +5,12 @@ const formatter = new Intl.DateTimeFormat('en-AU', {
   era: 'short', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
   minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZoneName: 'longOffset'
 })
+const zoneFormatter = new Intl.DateTimeFormat('en-AU', { timeZone: MELBOURNE_TIME_ZONE, timeZoneName: 'short' })
+export function melbourneTimeZoneName(value: string | Date): string {
+  const name = zoneFormatter.formatToParts(new Date(value)).find(part => part.type === 'timeZoneName')?.value
+  return name === 'AEST' || name === 'AEDT' ? name : 'local time'
+}
+
 const datePattern = /^(?!0000)\d{4}-(0[1-9]|1[0-2])-\d{2}$/
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?$/
 
@@ -42,7 +48,6 @@ export function melbourneTimeChoices(date: string, time = ''): MelbourneTimeChoi
     const instant = new Date(wallTime - offset), local = parts(instant)
     if (calendarMilliseconds(local) + instant.getUTCMilliseconds() !== wallTime) continue
     const utc = instant.toISOString()
-    if (!/^(?!0000)\d{4}-/.test(utc)) throw new Error('This Melbourne time falls outside the supported UTC years 0001–9999.')
     choices.push({ utc, offset: local.timeZoneName!.replace('GMT', 'UTC') })
   }
   return choices.sort((a, b) => a.utc.localeCompare(b.utc))
@@ -51,9 +56,9 @@ export function melbourneTimeChoices(date: string, time = ''): MelbourneTimeChoi
 export function melbourneDateTimeToUtc(date: string, time = '', occurrence = ''): string {
   const choices = melbourneTimeChoices(date, time)
   if (!choices.length) throw new Error('This Melbourne time is skipped when daylight saving starts. Choose a different time.')
-  if (choices.length === 1) return choices[0]!.utc
-  const selected = choices.find(choice => choice.utc === occurrence)
+  const selected = choices.length === 1 ? choices[0] : choices.find(choice => choice.utc === occurrence)
   if (!selected) throw new Error('This Melbourne time occurs twice when daylight saving ends. Choose its first or second occurrence.')
+  if (!/^(?!0000)\d{4}-/.test(selected.utc)) throw new Error('This Melbourne date and time falls outside the supported range (years 0001–9999).')
   return selected.utc
 }
 
@@ -71,9 +76,32 @@ export function melbourneCalendarDay(instant: Date): number {
   return calendarMilliseconds({ year: local.year!, month: local.month!, day: local.day! })
 }
 
-export function formatMelbourneDateTime(value: string): string {
+export function formatMelbourneDateTime(value: string, style: 'long' | 'numeric' = 'long'): string {
   const instant = new Date(value), local = parts(instant)
-  const date = new Intl.DateTimeFormat('en-AU', { timeZone: MELBOURNE_TIME_ZONE, day: 'numeric', month: 'long', year: 'numeric' }).format(instant)
+  const date = style === 'numeric' ? `${local.year!.padStart(4, '0')}-${local.month}-${local.day}`
+    : new Intl.DateTimeFormat('en-AU', { timeZone: MELBOURNE_TIME_ZONE, day: 'numeric', month: 'long', year: 'numeric' }).format(instant)
   const milliseconds = instant.getUTCMilliseconds()
-  return `${date}, ${local.hour}:${local.minute}:${local.second}${milliseconds ? `.${String(milliseconds).padStart(3, '0')}` : ''} Melbourne (${local.timeZoneName!.replace('GMT', 'UTC')})`
+  return `${date}${style === 'long' ? ', ' : ' '}${local.hour}:${local.minute}:${local.second}${milliseconds ? `.${String(milliseconds).padStart(3, '0')}` : ''} Melbourne time (${melbourneTimeZoneName(instant)})`
+}
+
+// DATE values record a calendar day, not an instant that can be shifted.
+export function formatCalendarDate(value: string): string {
+  if (!isValidCalendarDate(value)) throw new Error('Enter a valid calendar date.')
+  return new Intl.DateTimeFormat('en-AU', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${value}T00:00:00Z`))
+}
+
+export function melbourneDateKey(value: string | Date): string {
+  const local = parts(new Date(value))
+  return `${local.year!.padStart(4, '0')}-${local.month}-${local.day}`
+}
+
+export function melbourneMonthStart(month: string): Date {
+  const day = `${month}-01`
+  const choices = melbourneTimeChoices(day)
+  if (choices.length) return new Date(choices[choices.length - 1]!.utc)
+  // Melbourne's adoption of standard time skipped midnight on 1 February 1895.
+  // Resolve a historical midnight gap forward, matching PostgreSQL AT TIME ZONE.
+  const wallTime = Date.parse(`${day}T00:00:00Z`), before = wallTime - 48 * 3600000
+  const offset = calendarMilliseconds(parts(new Date(before))) - before
+  return new Date(wallTime - offset)
 }

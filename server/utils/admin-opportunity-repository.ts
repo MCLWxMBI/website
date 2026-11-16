@@ -1,4 +1,5 @@
 import { asc, eq, sql } from 'drizzle-orm'
+import { currentMelbourneUploadDate } from './opportunity-deadline-sql'
 import { connectDatabase } from '../database'
 import { articleHistory, opportunities, websiteIndexes } from '../database/schema'
 import { toStoredOpportunityDeadline } from '../../shared/utils/opportunity-deadline'
@@ -30,7 +31,7 @@ export function createAdminOpportunityRepository(db: ReturnType<typeof connectDa
       }
       if (!source) throw new Error('Source creation did not return a record.')
       // Preserve the scraper's history-first identity lock and deletion rules.
-      await tx.insert(articleHistory).values({ sourceUrl: input.sourceUrl, title: input.title }).onConflictDoNothing()
+      await tx.insert(articleHistory).values({ sourceUrl: input.sourceUrl, title: input.title, uploadDate: currentMelbourneUploadDate }).onConflictDoNothing()
       const [history] = await tx.select().from(articleHistory).where(eq(articleHistory.sourceUrl, input.sourceUrl)).for('update')
       if (!history || history.deleted) throw new OpportunityCreateConflict('This consultation URL was previously deleted and cannot be recreated here.')
       const [existing] = await tx.select({ id: opportunities.id }).from(opportunities).where(eq(opportunities.sourceUrl, input.sourceUrl))

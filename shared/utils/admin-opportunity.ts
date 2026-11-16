@@ -30,8 +30,8 @@ export function normalizeOpportunityLabels(value: unknown, field: string, canoni
   })
 }
 function timestamp(value: unknown, field: string): string {
-  if (typeof value !== 'string' || !value.includes('T') || !value.endsWith('Z')) return fail(field, 'Enter an exact date and time in UTC.')
-  try { return parseOpportunityDeadline(value).toISOString() } catch { return fail(field, 'Enter a valid UTC date and time (years 0001–9999).') }
+  if (typeof value !== 'string' || !value.includes('T') || !value.endsWith('Z')) return fail(field, 'Enter a valid Melbourne date and time.')
+  try { return parseOpportunityDeadline(value).toISOString() } catch { return fail(field, 'Enter a valid Melbourne date and time (years 0001–9999).') }
 }
 function organisation(value: unknown): OpportunityOrganisationSelection {
   if (!record(value)) return fail('organisation', 'Select an organisation or enter a new name and index URL.')
@@ -79,9 +79,9 @@ export function validateCreateOpportunity(value: unknown): CreateOpportunityRequ
     if (typeof value.submissionDeadline !== 'string') throw new Error()
     parseOpportunityDeadline(value.submissionDeadline)
     submissionDeadline = value.submissionDeadline
-  } catch { return fail('submissionDeadline', 'Enter a valid YYYY-MM month or exact UTC date and time (years 0001–9999).') }
+  } catch { return fail('submissionDeadline', 'Enter a valid YYYY-MM month or exact Melbourne date and time (years 0001–9999).') }
   const startDate = value.startDate == null || value.startDate === '' ? null : timestamp(value.startDate, 'startDate')
-  if (startDate && Date.parse(startDate) > parseOpportunityDeadline(submissionDeadline).getTime()) return fail('startDate', 'Opening must not be later than the deadline. Month-only deadlines close at the start of the month.')
+  if (startDate && Date.parse(startDate) > parseOpportunityDeadline(submissionDeadline).getTime()) return fail('startDate', 'Opening must not be later than the deadline. Month-only deadlines close at midnight Melbourne time on the first day of the month.')
   const summary = value.summary == null || (typeof value.summary === 'string' && !value.summary.trim()) ? undefined : text(value.summary, 'summary')
   if (summary && summary.split(/\s+/).length > 35) return fail('summary', 'Keep the summary to 35 words or fewer.')
   let location: CreateOpportunityRequest['location']
