@@ -1,18 +1,19 @@
 <script setup lang="ts">
+import type { OpportunityLocation } from '~~/shared/types/opportunity'
 import type { CreateOpportunityRequest } from '~~/shared/types/admin-opportunity'
 import { toOpportunity } from '~~/shared/utils/opportunity'
 import { formatOpportunityDate } from '~~/shared/utils/opportunity-deadline'
 import { getOpportunityStatus } from '~/utils/opportunity-status'
 import { getOpportunityTagGroups } from '~/utils/opportunity-access'
-const props = defineProps<{ request: CreateOpportunityRequest; organisationName: string; websiteTags: string[]; currentTime: number }>()
-const opportunity = computed(() => toOpportunity({ ...props.request, id: 'preview', sourceOrg: props.organisationName, website: 'preview' }))
+const props = defineProps<{ request: Omit<CreateOpportunityRequest, 'location'> & { location?: OpportunityLocation }; notice?: string; organisationName: string; websiteTags: string[]; currentTime: number }>()
+const opportunity = computed(() => toOpportunity({ ...props.request, id: 'preview', sourceOrg: props.organisationName, website: 'preview', tags: props.websiteTags.length ? props.websiteTags : null }))
 const status = computed(() => getOpportunityStatus(opportunity.value, props.currentTime))
 const tags = computed(() => getOpportunityTagGroups(opportunity.value))
 </script>
 
 <template>
   <article class="admin-card opportunity-preview" aria-labelledby="preview-title">
-    <p>This is a preview. The listing has not been published.</p>
+    <p>{{ notice ?? 'This is a preview. Changes have not been saved.' }}</p>
     <div class="preview-meta"><StatusBadge :status="status" /><span>{{ opportunity.jurisdiction }}</span></div>
     <p>{{ opportunity.sourceOrg }}</p>
     <h2 id="preview-title">{{ opportunity.title }}</h2>

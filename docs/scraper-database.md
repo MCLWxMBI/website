@@ -199,6 +199,13 @@ its normal protocol. See the admin creation contract in [contracts.md](contracts
 
 ## Deletion and deliberate reimport
 
+Admin Delete retains the opportunity row and sets its existing history deletion
+marker under a history-first lock. Public reads and exports exclude these URLs;
+admin reads retain access. The existing guard rejects subsequent scraper writes.
+Retained listings keep their source foreign key. Do not clear deletion markers
+during ordinary scraping. The physical-deletion instructions below are for
+deliberate database maintenance rather than the admin UI.
+
 Delete an opportunity with `DELETE FROM public.opportunities WHERE id = ...`.
 The deletion trigger atomically retains `article_history.deleted = true` and
 preserves the last successful hash. History has no cascading relationship to

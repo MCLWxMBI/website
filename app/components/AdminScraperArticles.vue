@@ -55,7 +55,7 @@ function uploadDate(value: string | null) {
           <p class="article-url">{{ article.sourceUrl }}</p>
           <p>Uploaded: <time v-if="article.uploadDate" :datetime="article.uploadDate">{{ uploadDate(article.uploadDate) }}</time><span v-else>Date unknown</span></p>
           <p>{{ articleStatus(article) }}</p>
-          <NuxtLink v-if="article.opportunityId" :to="`/opportunities/${encodeURIComponent(article.opportunityId)}`">View opportunity</NuxtLink>
+          <NuxtLink v-if="article.opportunityId" :to="article.deleted ? `/admin/opportunities/${encodeURIComponent(article.opportunityId)}` : `/opportunities/${encodeURIComponent(article.opportunityId)}`">{{ article.deleted ? 'View retained listing' : 'View opportunity' }}</NuxtLink>
         </li>
       </ul>
       <nav v-if="pages > 1" aria-label="Article pagination" class="article-pagination">

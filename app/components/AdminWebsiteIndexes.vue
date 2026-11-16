@@ -99,7 +99,7 @@ async function saveAll() {
         ? 'The changes could not be saved. Check every name, URL, status, feature tag, and note.'
         : statusCode === 409
           ? ((cause as { data?: { data?: { reason?: string } } }).data?.data?.reason === 'source_in_use'
-            ? 'This source has published opportunities. Disable scraping instead of deleting it.'
+            ? 'This source has linked opportunities, including any retained deleted listings. Disable scraping instead of deleting it.'
             : 'Another administrator changed these records. Reload the indexes before trying again.')
           : 'The changes could not be saved. Your edits are still here.'
   } finally {

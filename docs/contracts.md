@@ -137,7 +137,8 @@ and CSRF protection. Notes never enter the public response.
 
 `GET /api/opportunities` returns `OpportunityResponse[]`, ordered by effective
 deadline ascending and ID ascending. It returns the complete collection; the
-frontend applies search, filters and pagination. An empty database returns `[]`.
+frontend applies search, filters and pagination. URLs with
+`article_history.deleted = true` are excluded. An empty collection returns `[]`.
 
 The homepage accepts optional `deadlineFrom` and `deadlineTo` query parameters
 in canonical `YYYY-MM-DD` format (years 0001–9999). Bounds are inclusive UTC
@@ -513,6 +514,41 @@ Shared creation types are in `shared/types/admin-opportunity.ts`. This feature
 requires migration 0009 and adds no persisted draft state or public write endpoint.
 
 
+## Admin opportunity management
+
+All routes require enabled-admin authentication and private/no-store caching.
+PATCH and DELETE require the existing CSRF token. No schema change is needed.
+
+- `GET /api/admin/opportunities` accepts optional `q` (literal case-insensitive
+ title substring, max 200 characters), `source` (positive decimal source ID),
+ `status` (`all`, `upcoming`, `open`, `closed`), `deleted` (`false` by default,
+ `true` for retained records), and `page` (positive safe integer). It returns
+ `{ items, total, page, pageSize: 25 }`. Filtering and deadline/ID ascending
+ sorting precede pagination; pages beyond the final page are clamped.
+- `GET /api/admin/opportunities/:id` returns `AdminOpportunityDetail`:
+ `{ opportunity: OpportunityResponse, websiteTags: string[], deleted: boolean, version: string }`.
+ Collection items have this same shape. Deleted records remain readable here.
+- `PATCH /api/admin/opportunities/:id` accepts `expectedVersion` plus complete
+ editable content: title, fullText, optional summary, jurisdiction, nullable
+ startDate, submissionDeadline, category, and optional location. Omitted location
+ preserves geometry, including polygons; null clears it; a labelled Point
+ replaces it. Blank/omitted summary clears it. Creation validation applies,
+ including month precision and opening-time order. IDs, source URLs, organisation
+ names/associations, and source tags cannot be changed. Returns updated detail.
+- `DELETE /api/admin/opportunities/:id` accepts only `{ expectedVersion }` and
+ returns `{ deleted: true }`. It sets `article_history.deleted = true` while
+ retaining the opportunity and history title/hash/date/association. Public
+ collection/detail/export exclude it; public detail returns 404. Deleted
+ listings cannot be edited or deleted again through these endpoints.
+
+The opaque SHA-256 version fingerprints serialized content, source tags, and
+deletion state. Writes lock history first, then the opportunity, compare versions,
+and commit atomically. Stale/deleted writes return 409; invalid inputs return 400;
+unknown IDs return 404; database failures return generic 503 responses. Edits leave
+scrape-history metadata unchanged. Future scraper saves may overwrite published
+edits; deleted URLs remain suppressed. Earlier revisions and restoration are not
+provided. Deleted Scraper-history links open the retained admin view.
+
 ## Admin opportunity export
 
 The Opportunities admin tab has an **Export all opportunities** button. It
@@ -524,7 +560,7 @@ response policy. Configuration, database, and workbook failures return a generic
 can be retried without leaving the panel.
 
 The export reads every current opportunity from `DATABASE_URL` in one joined
-query, including closed listings and inactive sources. Catalogue filters and
+query, including closed listings and inactive sources, excluding deleted listings. Catalogue filters and
 pagination do not affect it. Rows are ordered by effective UTC submission deadline,
 then opportunity ID. No migration or automatic seeding is involved.
 
