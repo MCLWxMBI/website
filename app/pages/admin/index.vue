@@ -52,6 +52,7 @@ const pages: { title: string; path: string; editPath: string; description: strin
           <NuxtLink to="/">View public catalogue</NuxtLink>
         </div>
       </div>
+      <AdminOpportunities />
     </section>
     <section v-if="selected === 'scraper'" id="panel-scraper" aria-labelledby="heading-scraper">
       <AdminScraper />

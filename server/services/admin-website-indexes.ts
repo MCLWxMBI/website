@@ -143,7 +143,7 @@ export async function saveAdminWebsiteIndexes(
     return response(await repository.applyBatch(request.upserts, request.deleteIds))
   } catch (error) {
     if (error instanceof WebsiteIndexInUseError) {
-      throw createError({ statusCode: 409, statusMessage: 'This source has published opportunities. Disable scraping instead of deleting it.', data: { reason: 'source_in_use' } })
+      throw createError({ statusCode: 409, statusMessage: 'This source has linked opportunities, including any retained deleted listings. Disable scraping instead of deleting it.', data: { reason: 'source_in_use' } })
     }
     if (error instanceof WebsiteIndexConflictError) {
       throw createError({

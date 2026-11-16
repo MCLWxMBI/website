@@ -401,7 +401,7 @@ for the fixed table and writer responsibilities.
 
 Open **Opportunities** in the admin panel and choose **Export all opportunities**.
 The XLSX includes every current listing, including closed consultations and
-listings from inactive sources, regardless of catalogue filters or pagination.
+listings from inactive sources, excluding deleted listings, regardless of catalogue filters or pagination.
 It reads the application database selected by `DATABASE_URL`.
 
 Exact times use Melbourne time with the offset applicable to each timestamp
@@ -467,8 +467,26 @@ SELECT setval(
 );
 ```
 
-Editing and deleting published opportunities, saved unpublished drafts, and
-polygon authoring remain deferred.
+## Manage existing opportunities
+
+The admin **Opportunities** tab lists published opportunities by closing date and
+ID, with title search, source/status filters, and pagination. Choose **View** or
+**Edit**, preview changes, then **Save changes**. Edits update the stored listing
+directly; later successful scraper updates may overwrite them. Source identity,
+organisation names, and official URLs stay read-only. Manage source-wide tags in
+Indexes. Existing map boundaries stay unless explicitly removed or replaced.
+
+**Delete** asks for confirmation and sets the existing article-history deletion
+flag, retaining the opportunity row. Public catalogue/detail reads and XLSX
+exports exclude it. Choose **Deleted** in the Listings filter to inspect retained
+content. Deleted records are read-only, with no restore action or earlier versions.
+The scraper's existing deletion checks prevent subsequent writes to that URL.
+Referenced sources remain protected against deletion, including retained listings.
+
+Updates and deletion use history-first locks and a record fingerprint to reject
+stale forms with a conflict. Review the latest listing before reloading the editor;
+errors preserve entered values. No schema migration is required. Saved unpublished
+drafts and polygon authoring remain deferred.
 
 ## Scraper panel
 

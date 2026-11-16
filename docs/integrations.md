@@ -91,7 +91,7 @@ network scrape; do not substitute them for production data.
 | --- | --- |
 | `website_indexes` | Website-managed source IDs, names, entry URLs, `active` flags, notes, and source-wide `tags`. The scraper selects active sources and retains their IDs. |
 | `categories` | Category choices read by the scraper before Claude processing. Website validation and filter choices must also support those names. |
-| `opportunities` | Current public listings. The scraper writes validated content; administrators can also create listings through the website. |
+| `opportunities` | Stored listings, including retained deleted content. Administrators can create/edit listings; public readers exclude URLs marked deleted in history. |
 | `article_history` | Canonical URL identity, last successful input hash, deletion suppression, first-upload date, and originating source association. It survives opportunity deletion. |
 | `scraper_runs` | Historical run/source summaries and successfully saved titles. The website displays them without changing them. |
 | `users`, `static_pages` | Website administration and managed page content; the scraper does not use these tables. |
@@ -158,7 +158,14 @@ matters for manually published website listings, whose IDs are generated UUIDs.
 Coordinate identity handling before expecting the scraper to update such a
 listing; do not silently replace it or weaken database constraints elsewhere.
 
-Ordinary opportunity deletion triggers persistent `article_history.deleted=true`.
+Admin deletion retains the opportunity row and marks its history deleted in one
+transaction. Public collection, detail, and export reads exclude that URL; admins
+can inspect retained content under Opportunities → Deleted. Edits update the
+opportunity directly without modifying scrape-history metadata. Subsequent
+scraper saves may overwrite edits to published listings; earlier revisions are
+not retained.
+
+Physical opportunity deletion also triggers persistent `article_history.deleted=true`.
 Early history checks and guarded writes prevent ordinary collection from
 recreating it, including when deletion races with extraction. Deliberate reimport
 requires removing the matching history entry after the opportunity is absent.
@@ -211,7 +218,8 @@ rebuild, file import, or webhook. Public catalogue pages do not poll for new dat
 | `GET /api/indexes` | Current source registry and enabled flags; no internal notes. |
 | Admin Scraper → Sources | Source controls and tracked article history, including deleted/unassigned records. |
 | `GET /api/admin/scraper/runs` and `/:id` | Paginated run summaries and complete historical source/title snapshots. |
-| Admin Opportunities → Export | All current opportunities as XLSX, independently of catalogue filters. |
+| Admin Opportunities → Manage | Search/filter listings, edit directly, or delete publicly while retaining admin-only content. |
+| Admin Opportunities → Export | All published opportunities as XLSX, independently of catalogue filters. |
 
 The public homepage derives status using server-synchronized time, then filters,
 groups Upcoming → Open → Closed, sorts deadlines ascending within each group

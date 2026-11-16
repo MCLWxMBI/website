@@ -7,6 +7,7 @@ const props = defineProps<{ location: OpportunityLocation }>()
 const config = useRuntimeConfig()
 const mapElement = ref<HTMLElement | null>(null)
 let map: LeafletMap | undefined
+let resizeFrame: number | undefined
 
 onMounted(async () => {
   // Nuxt's client-only wrapper renders the element after its mounted hook.
@@ -46,7 +47,8 @@ onMounted(async () => {
     L.marker([latitude, longitude], { icon: markerIcon })
       .addTo(map)
       .bindPopup(popupLabel)
-    map.setView([latitude, longitude], 10)
+    // Initial framing must finish before the component can be removed by navigation.
+    map.setView([latitude, longitude], 10, { animate: false })
   } else {
     const area = L.geoJSON(props.location.geometry, {
       style: {
@@ -59,14 +61,15 @@ onMounted(async () => {
     }).addTo(map)
     const bounds = area.getBounds()
     if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [24, 24], maxZoom: 10 })
+      map.fitBounds(bounds, { padding: [24, 24], maxZoom: 10, animate: false })
     }
   }
 
-  requestAnimationFrame(() => map?.invalidateSize())
+  resizeFrame = requestAnimationFrame(() => map?.invalidateSize())
 })
 
 onBeforeUnmount(() => {
+  if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
   map?.remove()
   map = undefined
 })

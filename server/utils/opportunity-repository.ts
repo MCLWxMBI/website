@@ -1,6 +1,6 @@
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import { connectDatabase } from '../database'
-import { opportunities, websiteIndexes } from '../database/schema'
+import { articleHistory, opportunities, websiteIndexes } from '../database/schema'
 import type { OpportunityRepository } from '../services/opportunities'
 
 let connection: ReturnType<typeof connectDatabase> | undefined
@@ -12,6 +12,9 @@ function database() {
   return connection.db
 }
 
+// A deletion marker hides a retained listing from every public read and export.
+const published = sql`NOT EXISTS (SELECT 1 FROM ${articleHistory} WHERE ${articleHistory.sourceUrl} = ${opportunities.sourceUrl} AND ${articleHistory.deleted} = TRUE)`
+
 // Inject the connection so handlers and isolated database tests share queries.
 export function createOpportunityRepository(db: ReturnType<typeof connectDatabase>['db']) {
   return {
@@ -19,21 +22,23 @@ export function createOpportunityRepository(db: ReturnType<typeof connectDatabas
       return db.select({ opportunity: opportunities, sourceName: websiteIndexes.name,
         indexUrl: websiteIndexes.indexUrl, sourceTags: websiteIndexes.tags }).from(opportunities)
         .innerJoin(websiteIndexes, eq(opportunities.websiteId, websiteIndexes.id))
+        .where(published)
         .orderBy(asc(opportunities.submissionDeadline), asc(opportunities.id))
     },
     async all() {
       return db.select({ opportunity: opportunities, websiteTags: websiteIndexes.tags }).from(opportunities)
         .innerJoin(websiteIndexes, eq(opportunities.websiteId, websiteIndexes.id))
+        .where(published)
         .orderBy(asc(opportunities.submissionDeadline), asc(opportunities.id))
     },
     async findDetailById(id: string) {
       const [row] = await db.select({ opportunity: opportunities, websiteTags: websiteIndexes.tags })
         .from(opportunities).innerJoin(websiteIndexes, eq(opportunities.websiteId, websiteIndexes.id))
-        .where(eq(opportunities.id, id)).limit(1)
+        .where(and(eq(opportunities.id, id), published)).limit(1)
       return row ?? null
     },
     async findById(id: string) {
-      const [row] = await db.select().from(opportunities).where(eq(opportunities.id, id)).limit(1)
+      const [row] = await db.select().from(opportunities).where(and(eq(opportunities.id, id), published)).limit(1)
       return row ?? null
     },
     async findWebsiteTags(websiteId: bigint) {

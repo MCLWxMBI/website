@@ -1,4 +1,4 @@
-import type { Jurisdiction, OpportunityCategory } from '~~/shared/types/opportunity'
+import type { Jurisdiction, OpportunityCategory, OpportunityResponse } from '~~/shared/types/opportunity'
 import { OpportunityValidationError, validateCreateOpportunity } from '~~/shared/utils/admin-opportunity'
 import { parseOpportunityDeadline } from '~~/shared/utils/opportunity-deadline'
 
@@ -37,4 +37,19 @@ export function buildCreateOpportunity(draft: OpportunityCreateDraft) {
     tags: [...draft.tags.filter(tag => tag.trim().toLowerCase() !== 'invite-only'), ...(draft.inviteOnly ? ['Invite-only'] : [])],
     ...(location ? { location } : {})
   })
+}
+
+// Preserve UTC precision and leave existing boundaries intact until explicitly replaced.
+export function draftFromOpportunity(opportunity: OpportunityResponse): OpportunityCreateDraft {
+  const point = opportunity.location?.geometry.type === 'Point' ? opportunity.location : undefined
+  const coordinates = point?.geometry.type === 'Point' ? point.geometry.coordinates : undefined
+  const month = /^\d{4}-\d{2}$/.test(opportunity.submissionDeadline)
+  return { ...newOpportunityDraft(), title: opportunity.title, sourceUrl: opportunity.sourceUrl,
+    sourceOrg: opportunity.sourceOrg, sourceIndexId: opportunity.website, jurisdiction: opportunity.jurisdiction,
+    paragraphs: opportunity.fullText.map((text, index) => ({ key: index + 1, text })), summary: opportunity.summary ?? '',
+    categories: [...opportunity.category], tags: [...(opportunity.tags ?? []).filter(tag => tag.toLowerCase() !== 'invite-only')],
+    inviteOnly: (opportunity.tags ?? []).some(tag => tag.toLowerCase() === 'invite-only'),
+    startDate: opportunity.startDate?.slice(0, -1) ?? '', deadlineMode: month ? 'month' : 'datetime',
+    deadlineMonth: month ? opportunity.submissionDeadline : '', deadlineDateTime: month ? '' : opportunity.submissionDeadline.slice(0, -1),
+    locationEnabled: Boolean(point), locationLabel: point?.label ?? '', longitude: coordinates?.[0] ?? '', latitude: coordinates?.[1] ?? '' }
 }
