@@ -432,8 +432,17 @@ notes; enable it later in Scraper or Indexes if needed. Website features are
 read directly from the selected source. Edit them under Indexes or in the
 creation form. New sources start with the tags entered in the form.
 
-Exact opening and closing times use UTC. A month-only deadline uses `YYYY-MM`
-and closes at the start of that month. An optional place label, latitude, and
+Opening and day-specific closing dates use **Melbourne time** in the create and
+edit forms. Time is optional: a blank time means midnight at the start of that
+local date. The form automatically converts to UTC using Australia/Melbourne's
+rules for the selected date. A time without a date is rejected. A skipped clock
+time is rejected; a repeated time requires a first/second occurrence choice.
+Existing timestamps are converted back for editing, preserving their instant,
+seconds, milliseconds, and occurrence. Preview and exact detail dates show the
+effective Melbourne time and UTC offset. Public date filters include whole
+Melbourne calendar days. API timestamps and database storage remain UTC.
+A month-only deadline uses `YYYY-MM` and still closes at midnight UTC on the
+first day of that month. An optional place label, latitude, and
 longitude adds a map pin; boundary/polygon editing is not offered here.
 
 **Preview opportunity** validates the entries and shows the listing without

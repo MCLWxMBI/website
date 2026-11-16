@@ -53,9 +53,9 @@ describe('deadline presentation', () => {
     expect(formatOpportunityDate('2026-11', 'long')).toBe('November 2026')
   })
 
-  it('keeps full dates and opening timestamps in UTC', () => {
-    expect(formatOpportunityDate('2026-11-06T23:59:59Z')).toBe('6 Nov 2026')
-    expect(formatOpportunityDate('2026-11-06T23:59:59Z', 'long')).toBe('6 November 2026')
+  it('displays full dates and opening timestamps on the Melbourne calendar day', () => {
+    expect(formatOpportunityDate('2026-11-06T23:59:59Z')).toBe('7 Nov 2026')
+    expect(formatOpportunityDate('2026-11-06T23:59:59Z', 'long')).toBe('7 November 2026')
     expect(formatOpportunityDate('2026-09-21T00:00:00Z', 'long')).toBe('21 September 2026')
   })
 })

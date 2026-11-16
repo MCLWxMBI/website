@@ -103,7 +103,7 @@ const hasFilters = computed(() => props.selectedAuthorities.length + props.selec
       <input :id="`${deadlineId}-to`" :value="deadlineTo" type="date" min="0001-01-01" max="9999-12-31"
         :aria-invalid="Boolean(deadlineError) || undefined" :aria-describedby="`${deadlineId}-help${deadlineError ? ' ' + deadlineId + '-error' : ''}`"
         @change="changeDeadline('to', $event)">
-      <p :id="`${deadlineId}-help`" class="deadline-help">Dates use UTC and include both days. Month-only deadlines use the first day of the month.</p>
+      <p :id="`${deadlineId}-help`" class="deadline-help">Dates use Melbourne time and include both days. Month-only deadlines use the first day of the month.</p>
       <p v-if="deadlineError" :id="`${deadlineId}-error`" class="deadline-error" role="alert">{{ deadlineError }} Results keep the last valid date range.</p>
     </fieldset>
     <fieldset>

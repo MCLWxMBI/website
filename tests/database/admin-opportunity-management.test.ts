@@ -15,6 +15,7 @@ import { saveAdminWebsiteIndexes } from '../../server/services/admin-website-ind
 import { readOpportunity } from '../../server/services/opportunities'
 import { makeCreateOpportunity } from '../support/admin-opportunity'
 import type { AdminOpportunityDetail, UpdateOpportunityRequest } from '../../shared/types/admin-opportunity-management'
+import { melbourneDateTimeToUtc, melbourneInputsFromUtc } from '../../shared/utils/melbourne-time'
 
 const databaseUrl = process.env.TEST_DATABASE_URL
 if (!databaseUrl) throw new Error('Use npm run test:database.')
@@ -77,6 +78,28 @@ describe('opportunity management in PostgreSQL', () => {
     expect(cleared.opportunity).not.toHaveProperty('location')
     expect(cleared.opportunity).not.toHaveProperty('summary')
     expect(cleared.opportunity.startDate).toBeNull()
+  })
+  it('persists converted Melbourne inputs in UTC and round-trips DST occurrences through creation and editing', async () => {
+    const cases = [
+      { date: '2027-01-15', time: '', utc: '2027-01-14T13:00:00.000Z' },
+      { date: '2027-07-15', time: '17:00', utc: '2027-07-15T07:00:00.000Z' },
+      { date: '2027-04-04', time: '02:30:12.345', utc: '2027-04-03T15:30:12.345Z' },
+      { date: '2027-04-04', time: '02:30:12.345', utc: '2027-04-03T16:30:12.345Z' }
+    ]
+    for (const [index, item] of cases.entries()) {
+      const deadline = melbourneDateTimeToUtc(item.date, item.time, item.utc)
+      const opening = melbourneDateTimeToUtc('2027-01-01')
+      await publisher.create(makeCreateOpportunity({ sourceUrl: `https://example.gov.au/local-${index}`, submissionDeadline: deadline, startDate: opening }), `local-${index}`)
+      const saved = await readAdminOpportunity(`local-${index}`, repository)
+      expect(saved.opportunity).toMatchObject({ submissionDeadline: item.utc, startDate: '2026-12-31T13:00:00.000Z' })
+      const local = melbourneInputsFromUtc(saved.opportunity.submissionDeadline)
+      const updated = await updateAdminOpportunity(`local-${index}`, edit(saved, { title: 'Edited local time', submissionDeadline: melbourneDateTimeToUtc(local.date, local.time, local.occurrence) }), repository)
+      expect(updated.opportunity.submissionDeadline).toBe(item.utc)
+      expect((await readOpportunity(`local-${index}`, publicRepository)).opportunity.submissionDeadline).toBe(item.utc)
+      const [stored] = await connection.db.select().from(opportunities).where(eq(opportunities.id, `local-${index}`))
+      expect(stored?.submissionDeadline.toISOString()).toBe(item.utc)
+      expect(stored?.submissionDeadlinePrecision).toBe('datetime')
+    }
   })
   it('hides deleted listings from every public read and export while retaining their full content for admins', async () => {
     const original = await readAdminOpportunity('fixture', repository)

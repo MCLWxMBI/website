@@ -50,7 +50,7 @@ function fieldLabel(field: string) {
   if (field === 'organisation.newSource.indexUrl') return 'Organisation index URL'
   return ({ title: 'Title', sourceUrl: 'Official consultation URL', organisation: 'Publishing organisation', jurisdiction: 'Jurisdiction',
     summary: 'Summary', fullText: 'Paragraphs', category: 'Categories', tags: 'Website tags',
-    startDate: 'Opening date and time', submissionDeadline: 'Deadline', location: 'Location', form: 'Listing' } as Record<string, string>)[field.split('.')[0]!] ?? 'Listing'
+    startDate: 'Opening date and time (Melbourne)', submissionDeadline: 'Deadline', location: 'Location', form: 'Listing' } as Record<string, string>)[field.split('.')[0]!] ?? 'Listing'
 }
 function moveParagraph(index: number, direction: number) {
   const target = index + direction
@@ -181,14 +181,12 @@ onBeforeRouteUpdate((to, from) => to.params.id === from.params.id || confirmLeav
       </fieldset>
       <fieldset :disabled="saving">
         <legend>Dates</legend>
-        <p>Exact dates and times are entered in UTC. Status is calculated from the opening and closing dates.</p>
-        <label for="opportunity-start">Opening date and time (UTC, optional)</label>
-        <input id="opportunity-start" v-model="draft.startDate" type="datetime-local" step="1" :aria-invalid="invalid('startDate')">
+        <p>Enter dates and times in Melbourne time. They are converted automatically for daylight saving. A blank time means midnight at the start of the selected date.</p>
+        <AdminOpportunityDateInput id="opportunity-start" v-model:date="draft.startDate" v-model:time="draft.startTime" v-model:occurrence="draft.startOccurrence" label="Opening" :invalid="invalid('startDate')" />
         <label class="choice"><input v-model="draft.deadlineMode" type="radio" value="datetime"> Exact deadline</label>
         <label class="choice"><input v-model="draft.deadlineMode" type="radio" value="month"> Month-only deadline</label>
         <template v-if="draft.deadlineMode === 'datetime'">
-          <label for="opportunity-deadline">Closing date and time (UTC, required)</label>
-          <input id="opportunity-deadline" v-model="draft.deadlineDateTime" type="datetime-local" step="1" :aria-invalid="invalid('submissionDeadline')">
+          <AdminOpportunityDateInput id="opportunity-deadline" v-model:date="draft.deadlineDate" v-model:time="draft.deadlineTime" v-model:occurrence="draft.deadlineOccurrence" label="Closing" required :invalid="invalid('submissionDeadline')" />
         </template>
         <template v-else>
           <label for="opportunity-month">Closing month and year (required)</label>

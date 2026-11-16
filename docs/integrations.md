@@ -225,7 +225,12 @@ The public homepage derives status using server-synchronized time, then filters,
 groups Upcoming → Open → Closed, sorts deadlines ascending within each group
 (ID breaks ties), and paginates 12 results. Upcoming is unchecked by default, so
 the initial view shows Open → Closed. Month-only date comparisons use the first
-day in UTC. A record can exist in PostgreSQL but be outside the viewer's current
+day in UTC. Exact dates are displayed on the Melbourne calendar and public
+date filters include whole Melbourne days. The admin create/edit form accepts
+Melbourne local dates and optional times, defaults missing times to local
+midnight, and converts to UTC using the selected date's daylight-saving offset.
+Repeated times require an occurrence choice and skipped times are rejected.
+The API and scraper storage contract remain UTC. A record can exist in PostgreSQL but be outside the viewer's current
 search, status, access, authority, or date filters.
 
 History is not a list of every discovered URL. Invalid/new failed attempts may
