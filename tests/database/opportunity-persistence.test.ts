@@ -14,7 +14,7 @@ import {
 import { createOpportunityRepository } from '../../server/utils/opportunity-repository'
 import { serializeOpportunity } from '../../server/services/opportunities'
 import { toOpportunity } from '../../shared/utils/opportunity'
-import { toStoredOpportunityDeadline } from '../../shared/utils/opportunity-deadline'
+import { parseOpportunityDeadline, toStoredOpportunityDeadline } from '../../shared/utils/opportunity-deadline'
 
 const databaseUrl = process.env.TEST_DATABASE_URL
 if (!databaseUrl) throw new Error('Run npm run test:database and select an environment file.')
@@ -192,7 +192,7 @@ describe.each(['fresh', 'upgrade', 'upgrade-from-scraper', 'upgrade-from-deadlin
   })
 
   it('permits an opening exactly at the month deadline and enforces normalization on updates', async () => {
-    const row = await insert({ ...toStoredOpportunityDeadline('2026-11'), startDate: new Date('2026-11-01T00:00:00Z') })
+    const row = await insert({ ...toStoredOpportunityDeadline('2026-11'), startDate: parseOpportunityDeadline('2026-11') })
     await rejectsConstraint(connection.db.update(opportunities).set({ submissionDeadline: new Date('2026-11-02T00:00:00Z') })
       .where(eq(opportunities.id, row.id)))
   })

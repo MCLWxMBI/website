@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { and, asc, count, eq, ilike, sql } from 'drizzle-orm'
+import { currentMelbourneUploadDate, effectiveSubmissionDeadline } from './opportunity-deadline-sql'
 import { connectDatabase } from '../database'
 import { articleHistory, opportunities, websiteIndexes } from '../database/schema'
 import type { OpportunityRecord } from '../database/schema'
@@ -32,7 +33,7 @@ export function createAdminOpportunityManagementRepository(db: Database): AdminO
     return db.transaction(async tx => {
       const [identity] = await tx.select({ sourceUrl: opportunities.sourceUrl, title: opportunities.title, sourceIndexId: opportunities.websiteId }).from(opportunities).where(eq(opportunities.id, id))
       if (!identity) throw new OpportunityManagementNotFound()
-      await tx.insert(articleHistory).values(identity).onConflictDoNothing()
+      await tx.insert(articleHistory).values({ ...identity, uploadDate: currentMelbourneUploadDate }).onConflictDoNothing()
       // Scraper writes use this same lock first. Keep that ordering before locking the listing.
       await tx.select().from(articleHistory).where(eq(articleHistory.sourceUrl, identity.sourceUrl)).for('update')
       await tx.select().from(opportunities).where(eq(opportunities.id, id)).for('update')
@@ -49,16 +50,16 @@ export function createAdminOpportunityManagementRepository(db: Database): AdminO
         sql`coalesce(${articleHistory.deleted}, false) = ${query.deleted}`,
         query.q ? ilike(opportunities.title, `%${query.q.replace(/[\\%_]/g, '\\$&')}%`) : undefined,
         query.source === null ? undefined : eq(opportunities.websiteId, query.source),
-        query.status === 'closed' ? sql`${opportunities.submissionDeadline} <= ${now}` :
-          query.status === 'upcoming' ? sql`${opportunities.submissionDeadline} > ${now} AND ${opportunities.startDate} > ${now}` :
-            query.status === 'open' ? sql`${opportunities.submissionDeadline} > ${now} AND (${opportunities.startDate} IS NULL OR ${opportunities.startDate} <= ${now})` : undefined
+        query.status === 'closed' ? sql`${effectiveSubmissionDeadline} <= ${now}` :
+          query.status === 'upcoming' ? sql`${effectiveSubmissionDeadline} > ${now} AND ${opportunities.startDate} > ${now}` :
+            query.status === 'open' ? sql`${effectiveSubmissionDeadline} > ${now} AND (${opportunities.startDate} IS NULL OR ${opportunities.startDate} <= ${now})` : undefined
       )
       const [result] = await tx.select({ total: count() }).from(opportunities)
         .leftJoin(articleHistory, eq(articleHistory.sourceUrl, opportunities.sourceUrl)).where(where)
       const total = result!.total, pageSize = 25, page = Math.min(query.page, Math.max(1, Math.ceil(total / pageSize)))
       const rows = await tx.select(selection).from(opportunities).innerJoin(websiteIndexes, eq(websiteIndexes.id, opportunities.websiteId))
         .leftJoin(articleHistory, eq(articleHistory.sourceUrl, opportunities.sourceUrl)).where(where)
-        .orderBy(asc(opportunities.submissionDeadline), asc(opportunities.id)).limit(pageSize).offset((page - 1) * pageSize)
+        .orderBy(asc(effectiveSubmissionDeadline), asc(opportunities.id)).limit(pageSize).offset((page - 1) * pageSize)
       return { items: rows.map(serialize), total, page, pageSize }
     }, { isolationLevel: 'repeatable read', accessMode: 'read only' }),
     async detail(id) { const [row] = await read(db, id); return row ? serialize(row) : null },

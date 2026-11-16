@@ -1,3 +1,4 @@
+import { parseOpportunityDeadline, serializeOpportunityDeadline } from '../../shared/utils/opportunity-deadline'
 import { randomUUID } from 'node:crypto'
 import ExcelJS from 'exceljs'
 import postgres from 'postgres'
@@ -49,7 +50,7 @@ describe('database-backed opportunity export', () => {
     const repository = createOpportunityRepository(connection.db)
     const rows = await repository.allForExport()
     expect(rows).toHaveLength(14)
-    const expected = [...rows].sort((a, b) => a.opportunity.submissionDeadline.getTime() - b.opportunity.submissionDeadline.getTime()
+    const expected = [...rows].sort((a, b) => parseOpportunityDeadline(serializeOpportunityDeadline(a.opportunity.submissionDeadline, a.opportunity.submissionDeadlinePrecision)).getTime() - parseOpportunityDeadline(serializeOpportunityDeadline(b.opportunity.submissionDeadline, b.opportunity.submissionDeadlinePrecision)).getTime()
       || (a.opportunity.id < b.opportunity.id ? -1 : a.opportunity.id > b.opportunity.id ? 1 : 0))
     expect(rows.map(row => row.opportunity.id)).toEqual(expected.map(row => row.opportunity.id))
     const ids = rows.map(row => row.opportunity.id)

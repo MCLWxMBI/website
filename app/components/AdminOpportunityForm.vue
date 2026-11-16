@@ -191,7 +191,7 @@ onBeforeRouteUpdate((to, from) => to.params.id === from.params.id || confirmLeav
         <template v-else>
           <label for="opportunity-month">Closing month and year (required)</label>
           <input id="opportunity-month" v-model="draft.deadlineMonth" type="month" :aria-invalid="invalid('submissionDeadline')">
-          <p>A month-only deadline closes at midnight UTC on the first day of that month.</p>
+          <p>A month-only deadline closes at midnight Melbourne time on the first day of that month.</p>
         </template>
       </fieldset>
       <fieldset :disabled="saving">

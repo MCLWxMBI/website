@@ -404,8 +404,8 @@ The XLSX includes every current listing, including closed consultations and
 listings from inactive sources, excluding deleted listings, regardless of catalogue filters or pagination.
 It reads the application database selected by `DATABASE_URL`.
 
-Exact times use Melbourne time with the offset applicable to each timestamp
-(UTC+10 or UTC+11 during daylight saving). Month-only deadlines stay `YYYY-MM`.
+Exact times use Melbourne time with the AEST or AEDT label applicable to each
+timestamp, including in spreadsheet exports. Month-only deadlines stay `YYYY-MM`.
 Location uses the listing’s place label or falls back to its jurisdiction.
 Source tags come from `website_indexes.tags`. Opportunity IDs, deadline precision,
 and geometry JSON are omitted. Very long values are preserved as referenced,
@@ -439,9 +439,9 @@ rules for the selected date. A time without a date is rejected. A skipped clock
 time is rejected; a repeated time requires a first/second occurrence choice.
 Existing timestamps are converted back for editing, preserving their instant,
 seconds, milliseconds, and occurrence. Preview and exact detail dates show the
-effective Melbourne time and UTC offset. Public date filters include whole
+effective Melbourne time and AEST/AEDT label. Public date filters include whole
 Melbourne calendar days. API timestamps and database storage remain UTC.
-A month-only deadline uses `YYYY-MM` and still closes at midnight UTC on the
+A month-only deadline uses `YYYY-MM` and closes at midnight Melbourne time on the
 first day of that month. An optional place label, latitude, and
 longitude adds a map pin; boundary/polygon editing is not offered here.
 
@@ -475,6 +475,19 @@ SELECT setval(
   TRUE
 );
 ```
+
+## Melbourne time handling
+
+Melbourne-time behavior is implemented in website code and requires no schema
+change or new migration. Repository queries use a shared inline CASE expression
+for effective month-only closing, status filters, and ordering before pagination.
+Website creation and editing validate openings against that effective instant.
+Existing database constraints, defaults, stored month markers, and API formats
+stay unchanged; external writers remain responsible for the Melbourne rule.
+Website-owned history inserts explicitly supply the current Melbourne calendar
+date without replacing existing dates or changing the database's UTC default.
+User-facing timestamps, including page saves, browser backups, scraper runs,
+and exports, use Melbourne time (AEST/AEDT).
 
 ## Manage existing opportunities
 

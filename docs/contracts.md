@@ -202,8 +202,8 @@ interface OpportunityResponse {
 | **website** | Decimal string of the bigint `website_indexes.id` referenced by `opportunities.website_id`. Used to retrieve source feature tags. Serialized as a string to preserve bigint precision. |
 | **sourceOrg** | Non-empty name of the publishing organisation running the consultation. Used as the Authority filter value; source websites are separate. The frontend derives unique, alphabetically sorted options from the complete opportunity collection and matches exact names. |
 | **jurisdiction** | One of the supported jurisdiction values. Do not return an unrecognised free-text value. |
-| **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than the effective `submissionDeadline` instant (the first day at midnight UTC for month-only deadlines). |
-| **submissionDeadline** | An ISO 8601 UTC timestamp ending in `Z`, or a canonical `YYYY-MM` month-only value. Month-only values require years `0001`–`9999` and months `01`–`12`; their effective closing instant is the first day of that month at midnight UTC. |
+| **startDate** | ISO 8601 UTC timestamp ending in `Z`, or `null` when no opening time is available. When present, it must not be later than the effective `submissionDeadline` instant (the first day at midnight Melbourne time for month-only deadlines). |
+| **submissionDeadline** | An ISO 8601 UTC timestamp ending in `Z`, or a canonical `YYYY-MM` month-only value. Month-only values require years `0001`–`9999` and months `01`–`12`; their effective closing instant is the first day of that month at midnight Melbourne time. |
 | **category** | Array containing at least one supported category, without duplicates. |
 | **tags** | Labels inherited from `website_indexes.tags`, or `null` when the source array is empty. The opportunity has no stored tags column. These shared labels drive search, badges, and Access filtering for all opportunities from that source. |
 
@@ -239,7 +239,8 @@ Status rules, evaluated in this order, are:
 
 Equality at `startDate` means open; equality at `submissionDeadline` means
 closed. Comparisons use UTC instants. For a month-only deadline such as `2026-11`,
-closing occurs at `2026-11-01T00:00:00Z`, not at the end of November.
+closing occurs at midnight Melbourne time on 1 November
+(`2026-10-31T13:00:00Z`), using the offset for that date.
 
 The catalogue groups filtered results Upcoming → Open → Closed before
 pagination. Within each group, effective deadlines sort ascending, with
@@ -298,8 +299,16 @@ Persistence uses snake_case columns, while the response uses camelCase, includin
 `website_id` → `website`. Exact timestamps are serialized in UTC ending in `Z`.
 Migration `0004_deadline-precision` adds `submission_deadline_precision`, which is
 `datetime` by default, preserving existing rows. A `month` row stores the first
-day at midnight UTC in `submission_deadline`, but serializes as `YYYY-MM`; the
-precision column is not exposed in the public response.
+day at midnight UTC as a storage marker in `submission_deadline`, and serializes
+as `YYYY-MM`. Website repository queries use a shared inline CASE expression:
+month markers are interpreted at Melbourne midnight for status filters and
+ordering; exact timestamps retain their instants. JS uses the same local-month
+rule for comparisons. Stored markers, schema, constraints, defaults, and migration
+history stay unchanged. The database keeps its existing check against the stored
+deadline; website create/edit validation additionally checks the effective
+Melbourne deadline. External writers must apply that rule themselves. The
+precision column remains internal. No stored SQL function or new migration is
+required.
 Empty source tags and SQL null start dates become JSON null; null summary/location fields are
 omitted. `serializeOpportunity` provides this mapping and `toOpportunity`
 constructs the frontend model with the summary fallback. These helpers are used
@@ -508,9 +517,15 @@ selected occurrence. A local value whose UTC instant falls outside years
 0001–9999 is rejected. No new precision or response field is introduced.
 
 Exact dates on cards use the Melbourne calendar day; exact admin preview/detail
-and public detail values include local time and UTC offset. Month-only displays,
-storage, effective instants, status, and chronological sorting retain their
-existing rules. Time conversion utilities live in shared/utils/melbourne-time.ts.
+and public detail values include local time and AEST/AEDT. Month-only displays
+remain month-and-year; their effective closing is midnight Melbourne time at
+month start. Their normalized UTC storage markers are preserved. Time conversion utilities live in shared/utils/melbourne-time.ts. Every visible
+instant uses the shared formatter and AEST/AEDT label, including scraper run
+summaries, static-page save confirmations, and browser backup capture times.
+Upload DATE values keep their recorded calendar day and have no invented time;
+website-owned history inserts explicitly supply the current Melbourne day.
+The existing database default remains the UTC day for writers that omit it. UTC remains the
+machine timestamp format for APIs, storage, and server-clock synchronization.
 Victorian clock-change examples are verified against the
 [Victorian Government schedule](https://business.vic.gov.au/business-information/daylight-saving).
 
@@ -519,7 +534,7 @@ identity locking. It never upserts existing listings. Source tag edits are
 committed atomically with creation and roll back if publication fails.
 History links to the selected or newly created source through
 `article_history.source_index_id`; an existing null association is filled.
-New history uses the current UTC upload date, null hash, and false deletion
+New history uses the current Melbourne upload date, null hash, and false deletion
 marker. Existing history dates and hashes are preserved; its title is refreshed.
 Deleted history prevents creation. Failed publication rolls back all new records.
 
@@ -594,7 +609,7 @@ one. Opportunity IDs, deadline precision, geometry, internal notes, and scrape
 history are not exported. Empty collections produce a headers-only workbook.
 
 Exact timestamps use `Australia/Melbourne` at the timestamp’s own instant:
-`YYYY-MM-DD HH:mm:ss UTC+10:00` (AEST) or `UTC+11:00` (AEDT), preserving
+`YYYY-MM-DD HH:mm:ss Melbourne time (AEST)` or `Melbourne time (AEDT)`, preserving
 nonzero milliseconds. Month-only deadlines remain `YYYY-MM`. Database storage
 remains UTC. Source IDs and all content are literal text cells, including content
 starting with formula characters. Headers are frozen and filterable; cells wrap.

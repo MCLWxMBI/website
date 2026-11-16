@@ -185,12 +185,19 @@ published listing. Detailed writer/deletion rules are in
 | Optional `summary` / `location` | Null values are omitted from the public response. Valid stored geometry drives the detail-page map. |
 | History upload date | Admin articles display the stored date-only value; it is not an opportunity deadline or a last-scraped timestamp. |
 
-Month-only deadlines normalize to the first day at `00:00:00Z`. Both deadline
+Month-only deadlines retain their normalized first-day `00:00:00Z` storage
+marker. Website repository queries use an inline expression to interpret the
+marker as Melbourne midnight for sorting and status; JS uses the same rule.
+Website create/edit validation checks that effective instant. Existing database
+checks, defaults, exact timestamps, stored markers, and migration history remain
+unchanged. External writers are responsible for effective-opening validation.
+No new migration or database function is required. Both deadline
 columns must be written together. The website uses that instant for closing,
 sorting, and date filtering: `2027-09` becomes closed at the start of September,
-not the end. Opening timestamps must not exceed the effective deadline. The
-reviewed scraper model enforces that ordering, even though some scraper README
-wording describes month deadlines more broadly.
+not the end. Website validation rejects openings after the effective deadline. External
+writers must account for the earlier Melbourne month-start instant when
+validating month-only opportunities; their validation remains separate from the
+website and unchanged database constraint.
 
 Exact publisher-local times must be converted to UTC using the applicable
 timezone and daylight saving. The current scraper uses local end-of-day for a
@@ -200,7 +207,9 @@ deadlines.
 
 The scraper explicitly supplies its first-upload date using the
 Australia/Sydney calendar date. The website schema still permits null historical
-upload dates and defaults omitted dates to the current UTC date. Preserve stored
+upload dates. Website-owned history inserts explicitly supply the current
+Melbourne date; the existing shared database default remains UTC for other
+writers that omit the date. Preserve stored
 dates on updates and display them as dates; do not timezone-shift them as if they
 were instants. A schema-policy change here must be migrated from this repository.
 
@@ -225,12 +234,13 @@ The public homepage derives status using server-synchronized time, then filters,
 groups Upcoming → Open → Closed, sorts deadlines ascending within each group
 (ID breaks ties), and paginates 12 results. Upcoming is unchecked by default, so
 the initial view shows Open → Closed. Month-only date comparisons use the first
-day in UTC. Exact dates are displayed on the Melbourne calendar and public
+day at Melbourne midnight. Exact dates are displayed on the Melbourne calendar and public
 date filters include whole Melbourne days. The admin create/edit form accepts
 Melbourne local dates and optional times, defaults missing times to local
 midnight, and converts to UTC using the selected date's daylight-saving offset.
 Repeated times require an occurrence choice and skipped times are rejected.
-The API and scraper storage contract remain UTC. A record can exist in PostgreSQL but be outside the viewer's current
+Visible timestamps use Melbourne time (AEST/AEDT), including save confirmations,
+backup capture times and exports. The API and scraper storage contract remain UTC. A record can exist in PostgreSQL but be outside the viewer's current
 search, status, access, authority, or date filters.
 
 History is not a list of every discovered URL. Invalid/new failed attempts may
@@ -308,7 +318,7 @@ instructions still present in another repository. In particular:
   its own SQL copy has a looser category check. Adding a category row alone does
   not update website validation or filter controls. Coordinate all required
   changes here before allowing the scraper to produce a new category.
-- The website allows unknown/null history upload dates with a UTC default;
+- The website allows unknown/null history upload dates with an unchanged UTC database default and explicit Melbourne dates on website inserts;
   the scraper SQL copy declares a required Sydney-date default. The scraper's
   explicit successful-save dates work with the website schema; do not apply the
   other SQL copy to silently replace this policy.

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatMelbourneDateTime } from '~~/shared/utils/melbourne-time'
 import type { StaticPageResponse, StaticPageSlug, StoredStaticPageResponse } from '~~/shared/types/static-page'
 import { isStaticPageSlug } from '~~/shared/types/static-page'
 import { sanitizeStaticPageHtml } from '~~/shared/utils/static-page-content'
@@ -37,7 +38,7 @@ const editorState = computed(() => getStaticPageEditorState(published.value, con
 const dirty = computed(() => editorState.value.dirty)
 const canSave = computed(() => editorState.value.canSave)
 const previewHtml = computed(() => sanitizeStaticPageHtml(contentHtml.value))
-const savedAtLabel = computed(() => savedAt.value ? new Date(savedAt.value).toISOString().replace('T', ' ').replace('Z', ' UTC') : '')
+const savedAtLabel = computed(() => savedAt.value ? formatMelbourneDateTime(savedAt.value) : '')
 const headings = computed(() => {
   if (!clientReady.value) return []
   const document = new DOMParser().parseFromString(contentHtml.value, 'text/html')

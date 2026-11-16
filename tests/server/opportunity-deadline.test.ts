@@ -37,8 +37,8 @@ describe('deadline formats and persistence mapping', () => {
   })
 
   it('rejects a persisted month timestamp that is not midnight on the first day in UTC', () => {
-    expect(() => serializeOpportunityDeadline(new Date('2026-11-02T00:00:00Z'), 'month')).toThrow('midnight UTC')
-    expect(() => serializeOpportunityDeadline(new Date('2026-11-01T00:00:00+11:00'), 'month')).toThrow('midnight UTC')
+    expect(() => serializeOpportunityDeadline(new Date('2026-11-02T00:00:00Z'), 'month')).toThrow('storage marker')
+    expect(() => serializeOpportunityDeadline(new Date('2026-11-01T00:00:00+11:00'), 'month')).toThrow('storage marker')
   })
 
   it('validates deadlines at the frontend response boundary', () => {
@@ -90,9 +90,9 @@ describe('chronological deadline ordering', () => {
       { id: 'a', submissionDeadline: '2027-02-01T00:00:00Z', status: 'open' }
     ])
     const sorted = sortOpportunitiesByDeadline(input)
-    expect(sorted.map(item => item.id)).toEqual(['first', 'a', 'b', 'last'])
-    expect(sorted.slice(0, 2).map(item => item.id)).toEqual(['first', 'a'])
-    expect(sorted.slice(2, 4).map(item => item.id)).toEqual(['b', 'last'])
+    expect(sorted.map(item => item.id)).toEqual(['b', 'first', 'a', 'last'])
+    expect(sorted.slice(0, 2).map(item => item.id)).toEqual(['b', 'first'])
+    expect(sorted.slice(2, 4).map(item => item.id)).toEqual(['a', 'last'])
     expect(input.map(item => item.id)).toEqual(['last', 'b', 'first', 'a'])
   })
 

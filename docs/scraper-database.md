@@ -21,7 +21,9 @@ existing timestamps. Existing rows and inserts that omit precision default to
 Migration `0005_article-history-upload-date` adds `article_history.upload_date`,
 exposed by Drizzle as `uploadDate`. It is a PostgreSQL `date` (`YYYY-MM-DD`),
 containing a day, month and year without a time. New history rows default to the
-current UTC date; writers can supply a known first-upload date explicitly.
+current UTC date from the existing database default; writers can supply a known
+first-upload date explicitly. Website-owned history inserts explicitly supply the
+current Melbourne day, without changing that shared default.
 Updating a scrape hash or deleting an opportunity preserves the upload date.
 Existing history rows remain null because their original upload date is unknown.
 Only finite dates are accepted when supplied.
@@ -103,7 +105,7 @@ and deployment are outside this repository change.
   nonempty array of trimmed plain-text paragraphs; repeated paragraphs are valid.
 - Store finite timestamps and ensure a supplied opening time does not exceed the
   effective deadline. For month precision this means the first day at midnight
-  UTC, even if the publisher did not give a specific day. Status is derived, never
+  Melbourne time, even if the publisher did not give a specific day. Status is derived, never
   stored.
 - Validate full HTTPS URL syntax, plain text, canonical `Invite-only` spelling,
   summary length (at most 35 words), and GeoJSON coordinate bounds and ring closure
@@ -120,8 +122,12 @@ month and year are known. Month values require years `0001`–`9999` and months
 | `2026-11` | `2026-11-01T00:00:00Z` | `month` |
 | `2026-11-06T17:00:00Z` | `2026-11-06T17:00:00Z` | `datetime` |
 
-The month timestamp is used for sorting and closing status; the precision flag
-preserves the month-only display. A month-only November deadline becomes closed
+The month timestamp is a normalized storage marker. Its effective deadline for
+sorting and closing is midnight Melbourne time on the first day, computed by
+a shared inline CASE expression in the website repository queries; no stored
+function is required. For month precision, the expression is
+`(submission_deadline AT TIME ZONE 'UTC') AT TIME ZONE 'Australia/Melbourne'`.
+The precision flag preserves the month-only display. A month-only November deadline becomes closed
 at the start of November. Do not pass a bare `YYYY-MM` directly into PostgreSQL's
 timestamp column, or infer month precision from an exact timestamp on day one.
 
@@ -129,7 +135,11 @@ Write both deadline fields together on inserts and whenever updating a deadline,
 including in `ON CONFLICT (source_url) DO UPDATE`. Reset precision to `datetime`
 when an exact date replaces a month-only value. The database rejects unknown
 precision values and month timestamps that are not midnight UTC on the first day.
-The existing opening-time constraint applies to the normalized deadline.
+The existing database opening-time check against the stored value remains
+unchanged. Website create/edit validation additionally checks the effective
+Melbourne closing instant; external writers must perform that validation as well.
+For `2026-11`, that instant is `2026-10-31T13:00:00Z`. The schema and migration
+history are unchanged, and no new migration or database function is required.
 
 TypeScript writers can use `toStoredOpportunityDeadline` from
 `shared/utils/opportunity-deadline.ts` to validate and obtain both database
@@ -189,7 +199,8 @@ and history-first locking protocol after locking the selected source. The
 organisation autocomplete selects an existing Indexes record or creates a new
 one with its name and HTTPS index URL, scraping disabled, and empty notes.
 History is linked to that source; conflicting known associations are rejected.
-New history rows have a null scrape hash and current UTC upload date. Existing
+Website-created history rows have a null scrape hash and an explicitly supplied
+current Melbourne upload date. The shared database default remains UTC. Existing
 hashes and upload dates are preserved, and the history title is refreshed.
 Manual publication never clears deletion markers or overwrites an existing
 opportunity. Optional source tag edits are saved in the same transaction. Opportunity website IDs reference the selected

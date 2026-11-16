@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatCalendarDate } from '~~/shared/utils/melbourne-time'
 import type { AdminScraperArticle, AdminScraperArticlesResponse } from '~~/shared/types/admin-scraper'
 
 const props = defineProps<{ source: string; sourceName: string }>()
@@ -29,7 +30,7 @@ function articleStatus(article: AdminScraperArticle) {
 }
 function uploadDate(value: string | null) {
   if (!value) return 'Date unknown'
-  return new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
+  return formatCalendarDate(value)
 }
 </script>
 

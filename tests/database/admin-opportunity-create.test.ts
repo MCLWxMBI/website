@@ -1,3 +1,4 @@
+import { melbourneDateKey } from '../../shared/utils/melbourne-time'
 import { readFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
@@ -70,7 +71,7 @@ describe('manual opportunity publication in PostgreSQL', () => {
     expect(await connection.db.select().from(websiteIndexes)).toEqual(before)
     const [history] = await connection.db.select().from(articleHistory)
     expect(history).toMatchObject({ sourceUrl: result.opportunity.sourceUrl, hash: null, sourceIndexId: 1n, deleted: false })
-    expect(history?.uploadDate).toBe(new Date().toISOString().slice(0, 10))
+    expect(history?.uploadDate).toBe(melbourneDateKey(new Date()))
   })
   it('reads source features directly without changing existing listings', async () => {
     await connection.db.update(websiteIndexes).set({ tags: ['Login required'] }).where(eq(websiteIndexes.id, 1n))

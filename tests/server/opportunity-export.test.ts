@@ -28,7 +28,7 @@ describe('opportunity spreadsheet', () => {
       'Opening date/time', 'Submission deadline', 'Categories', 'Source tags', 'Location'])
     expect(sheet.getRow(2).values).toEqual([undefined, '=SUM(A1:A2)', 'Publishing organisation', 'Victoria',
       '9007199254740993', '+Source name', 'https://example.gov.au', 'https://example.gov.au/consultation', '',
-      'First paragraph.\n\nSecond paragraph.', '', '2026-11-06 11:01:02.003 UTC+11:00',
+      'First paragraph.\n\nSecond paragraph.', '', '2026-11-06 11:01:02.003 Melbourne time (AEDT)',
       'Climate change\nWater & resources', 'Invite-only\nLogin required', 'Victoria'])
     expect(sheet.getCell('A2').type).toBe(ExcelJS.ValueType.String)
     expect(sheet.getCell('D2').type).toBe(ExcelJS.ValueType.String)
@@ -47,7 +47,7 @@ describe('opportunity spreadsheet', () => {
     ])
     const sheet = workbook.worksheets[0]!
     expect(sheet.getCell('K2').value).toBe('2026-11')
-    expect(sheet.getCell('J2').value).toBe('2026-07-15 10:30:00 UTC+10:00')
+    expect(sheet.getCell('J2').value).toBe('2026-07-15 10:30:00 Melbourne time (AEST)')
     expect(sheet.getCell('H2').value).toBe('Summary.')
     expect(sheet.getCell('N2').value).toBe('Melbourne')
     expect(sheet.getCell('N3').value).toBe('Commonwealth')
@@ -84,11 +84,11 @@ describe('opportunity spreadsheet', () => {
 
 describe('Melbourne export times', () => {
   it.each([
-    ['2026-04-04T15:59:59Z', '2026-04-05 02:59:59 UTC+11:00'],
-    ['2026-04-04T16:00:00Z', '2026-04-05 02:00:00 UTC+10:00'],
-    ['2026-10-03T15:59:59Z', '2026-10-04 01:59:59 UTC+10:00'],
-    ['2026-10-03T16:00:00Z', '2026-10-04 03:00:00 UTC+11:00'],
-    ['2027-01-01T13:00:00Z', '2027-01-02 00:00:00 UTC+11:00']
+    ['2026-04-04T15:59:59Z', '2026-04-05 02:59:59 Melbourne time (AEDT)'],
+    ['2026-04-04T16:00:00Z', '2026-04-05 02:00:00 Melbourne time (AEST)'],
+    ['2026-10-03T15:59:59Z', '2026-10-04 01:59:59 Melbourne time (AEST)'],
+    ['2026-10-03T16:00:00Z', '2026-10-04 03:00:00 Melbourne time (AEDT)'],
+    ['2027-01-01T13:00:00Z', '2027-01-02 00:00:00 Melbourne time (AEDT)']
   ])('formats %s with its own daylight saving offset', (input, expected) => {
     expect(formatExportTimestamp(new Date(input))).toBe(expected)
   })

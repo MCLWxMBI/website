@@ -49,12 +49,12 @@ describe('Melbourne local time conversion', () => {
   })
   it('handles early years and historical second offsets without silently rolling into year zero', () => {
     expect(melbourneDateTimeToUtc('0001-01-01', '12:00')).toBe('0001-01-01T02:20:08.000Z')
-    expect(() => melbourneDateTimeToUtc('0001-01-01')).toThrow('supported UTC years')
+    expect(() => melbourneDateTimeToUtc('0001-01-01')).toThrow('supported range')
     expect(melbourneDateTimeToUtc('9999-12-31', '23:59:59.999')).toBe('9999-12-31T12:59:59.999Z')
   })
   it('formats the effective local time and offset for preview and details', () => {
-    expect(formatMelbourneDateTime('2027-01-14T13:00:00Z')).toBe('15 January 2027, 00:00:00 Melbourne (UTC+11:00)')
-    expect(formatMelbourneDateTime('2027-07-15T07:00:00.123Z')).toBe('15 July 2027, 17:00:00.123 Melbourne (UTC+10:00)')
+    expect(formatMelbourneDateTime('2027-01-14T13:00:00Z')).toBe('15 January 2027, 00:00:00 Melbourne time (AEDT)')
+    expect(formatMelbourneDateTime('2027-07-15T07:00:00.123Z')).toBe('15 July 2027, 17:00:00.123 Melbourne time (AEST)')
   })
 })
 
@@ -65,10 +65,10 @@ describe('optional admin times', () => {
     expect(() => buildCreateOpportunity({ ...draft(), startTime: '17:00' })).toThrow('opening date')
     expect(() => buildCreateOpportunity({ ...draft(), deadlineDate: '', deadlineTime: '17:00' })).toThrow('valid date')
   })
-  it('validates opening order after conversion and keeps month-only deadlines at UTC month start', () => {
-    const month = { ...draft(), deadlineMode: 'month' as const, deadlineMonth: '2027-11', startDate: '2027-11-01', startTime: '11:00' }
-    expect(buildCreateOpportunity(month)).toMatchObject({ submissionDeadline: '2027-11', startDate: '2027-11-01T00:00:00.000Z' })
-    expect(() => buildCreateOpportunity({ ...month, startTime: '11:00:01' })).toThrow('Opening')
+  it('validates opening order after conversion and keeps month-only deadlines at Melbourne month start', () => {
+    const month = { ...draft(), deadlineMode: 'month' as const, deadlineMonth: '2027-11', startDate: '2027-11-01', startTime: '' }
+    expect(buildCreateOpportunity(month)).toMatchObject({ submissionDeadline: '2027-11', startDate: '2027-10-31T13:00:00.000Z' })
+    expect(() => buildCreateOpportunity({ ...month, startTime: '00:00:01' })).toThrow('Opening')
     expect(() => buildCreateOpportunity({ ...draft(), startDate: '2027-11-06', startTime: '00:00:01' })).toThrow('Opening')
   })
 })
