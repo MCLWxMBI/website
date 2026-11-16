@@ -12,6 +12,9 @@ describe('manual opportunity validation', () => {
       category: ['Climate change'], tags: ['Science', 'Invite-only'], startDate: null })
     expect(result).not.toHaveProperty('summary')
   })
+  it.each(['1', '9007199254740993', '9223372036854775807'])('preserves a valid organisation source ID exactly: %s', existingId => {
+    expect(validateCreateOpportunity(makeCreateOpportunity({ organisation: { existingId } })).organisation).toEqual({ existingId })
+  })
   it('allows a new source, trims its name and URL, and retains month precision', () => {
     expect(validateCreateOpportunity(makeCreateOpportunity({ organisation: { newSource: { name: ' New authority ', indexUrl: ' https://example.gov.au/consultations ' } },
       submissionDeadline: '2027-11', startDate: '2027-10-01T12:00:00Z', tags: [] })))

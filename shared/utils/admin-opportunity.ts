@@ -2,6 +2,8 @@ import { jurisdictions, opportunityCategories } from '../types/opportunity'
 import type { CreateOpportunityRequest, OpportunityOrganisationSelection } from '../types/admin-opportunity'
 import { parseOpportunityDeadline } from './opportunity-deadline'
 
+const MAX_SOURCE_ID = BigInt('9223372036854775807')
+
 export class OpportunityValidationError extends Error {
   constructor(public field: string, message: string) { super(message) }
 }
@@ -38,7 +40,7 @@ function organisation(value: unknown): OpportunityOrganisationSelection {
   if ('existingId' in value) {
     onlyKeys(value, ['existingId'], 'organisation')
     const id = value.existingId
-    if (typeof id !== 'string' || !/^[1-9]\d*$/.test(id) || BigInt(id) > 9223372036854775807n) {
+    if (typeof id !== 'string' || !/^[1-9]\d*$/.test(id) || BigInt(id) > MAX_SOURCE_ID) {
       return fail('organisation', 'Select a valid organisation.')
     }
     return { existingId: id }

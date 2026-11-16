@@ -3,6 +3,8 @@ import type { AdminOpportunityDetail, AdminOpportunityList, UpdateOpportunityReq
 import { OpportunityValidationError } from '../../shared/utils/admin-opportunity'
 import { validateOpportunityVersion, validateUpdateOpportunity } from '../../shared/utils/admin-opportunity-management'
 
+const MAX_SOURCE_ID = BigInt('9223372036854775807')
+
 export interface AdminOpportunityQuery {
   q: string
   source: bigint | null
@@ -36,7 +38,7 @@ export async function listAdminOpportunities(query: Record<string, unknown>, rep
   const parsed = validate((): AdminOpportunityQuery => {
     const q = query.q ?? '', source = query.source ?? '', status = query.status ?? 'all', deleted = query.deleted ?? 'false', page = query.page ?? '1'
     if (typeof q !== 'string' || q.length > 200 || typeof source !== 'string'
-      || (source !== '' && (!/^[1-9]\d*$/.test(source) || BigInt(source) > 9223372036854775807n))
+      || (source !== '' && (!/^[1-9]\d*$/.test(source) || BigInt(source) > MAX_SOURCE_ID))
       || !['all', 'upcoming', 'open', 'closed'].includes(status as string) || typeof status !== 'string'
       || !['true', 'false'].includes(deleted as string) || typeof deleted !== 'string'
       || typeof page !== 'string' || !/^[1-9]\d*$/.test(page) || !Number.isSafeInteger(Number(page))) throw new Error('Invalid filters')

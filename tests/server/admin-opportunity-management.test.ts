@@ -45,6 +45,17 @@ describe('opportunity management validation and services', () => {
       await expect(listAdminOpportunities(query, repo)).rejects.toMatchObject({ statusCode: 400 })
     }
   })
+  it.each(['1', '9007199254740993', '9223372036854775807'])('preserves a valid source ID exactly: %s', async source => {
+    const repo = repository()
+    await listAdminOpportunities({ source }, repo)
+    expect(repo.list).toHaveBeenCalledWith(expect.objectContaining({ source: BigInt(source) }))
+    expect(vi.mocked(repo.list).mock.calls[0]![0].source?.toString()).toBe(source)
+  })
+  it.each(['0', '-1', '1.5', '9223372036854775808', 'invalid'])('rejects an invalid source ID before querying: %s', async source => {
+    const repo = repository()
+    await expect(listAdminOpportunities({ source }, repo)).rejects.toMatchObject({ statusCode: 400 })
+    expect(repo.list).not.toHaveBeenCalled()
+  })
   it('distinguishes missing records, conflicts, and generic database failures', async () => {
     const repo = repository()
     await expect(readAdminOpportunity('missing', repo)).rejects.toMatchObject({ statusCode: 404 })
