@@ -179,11 +179,15 @@ watch(pageCount, (count) => {
         <p>Discover consultations on the environmental decisions that matter, before the submission window closes.</p>
         <label class="hero-search">
           <span class="sr-only">Search opportunities</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m16 16 4 4" />
+          </svg>
           <input v-model="search" type="search" placeholder="Search by topic, organisation or keyword">
         </label>
         <div class="hero-meta">
-          <span v-if="requestStatus === 'success'"><i class="live-dot"></i> {{ openOpportunityCount }} opportunities open now</span>
+          <span v-if="requestStatus === 'success'"><i class="live-dot"></i> {{ openOpportunityCount }} opportunities
+            open now</span>
           <span>Victoria & Commonwealth</span>
         </div>
       </div>
@@ -194,7 +198,8 @@ watch(pageCount, (count) => {
     <section class="listing-section">
       <div class="container">
         <blockquote class="catalogue-tagline">
-          “Access to information and meaningful public participation are fundamental to better environmental decision-making. At MCLE we aim to help bridge the gap between knowledge, decision-makers and communities.”
+          Access to information and meaningful public participation are fundamental to better environmental
+          decision-making. At MCLE we aim to help bridge the gap between knowledge, decision-makers and communities.s
         </blockquote>
 
         <div class="listing-toolbar">
@@ -205,31 +210,22 @@ watch(pageCount, (count) => {
             <h2 v-else>{{ filtered.length }} {{ filtered.length === 1 ? 'result' : 'results' }}</h2>
           </div>
           <button class="filter-trigger" type="button" @click="mobileFiltersOpen = true">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M5 10h10M8 15h4"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M3 5h14M5 10h10M8 15h4" />
+            </svg>
             Filters <span v-if="activeFilterCount">{{ activeFilterCount }}</span>
           </button>
         </div>
 
         <div class="listing-layout">
           <aside class="filter-sidebar">
-            <OpportunityFilters
-              :authorities="authorities"
-              :selected-authorities="selectedAuthorities"
-              @toggle-authority="toggleAuthority"
-              :selected-jurisdictions="selectedJurisdictions"
-              :selected-categories="selectedCategories"
-              :selected-statuses="selectedStatuses"
-              :selected-access="selectedAccess"
-              :deadline-from="deadlineDraft.from"
-              :deadline-to="deadlineDraft.to"
-              :deadline-error="deadlineError"
-              @update-deadline="updateDeadlineRange"
-              @toggle-jurisdiction="toggleJurisdiction"
-              @toggle-category="toggleCategory"
-              @toggle-status="toggleStatus"
-              @toggle-access="toggleAccess"
-              @clear="clearFilters"
-            />
+            <OpportunityFilters :authorities="authorities" :selected-authorities="selectedAuthorities"
+              @toggle-authority="toggleAuthority" :selected-jurisdictions="selectedJurisdictions"
+              :selected-categories="selectedCategories" :selected-statuses="selectedStatuses"
+              :selected-access="selectedAccess" :deadline-from="deadlineDraft.from" :deadline-to="deadlineDraft.to"
+              :deadline-error="deadlineError" @update-deadline="updateDeadlineRange"
+              @toggle-jurisdiction="toggleJurisdiction" @toggle-category="toggleCategory" @toggle-status="toggleStatus"
+              @toggle-access="toggleAccess" @clear="clearFilters" />
           </aside>
 
           <div class="results-column">
@@ -242,19 +238,25 @@ watch(pageCount, (count) => {
               <button class="button button-primary" type="button" @click="refresh()">Try again</button>
             </div>
             <div v-else-if="visibleOpportunities.length" class="opportunity-grid">
-              <OpportunityCard v-for="item in visibleOpportunities" :key="item.id" :opportunity="item" :return-query="queryState" />
+              <OpportunityCard v-for="item in visibleOpportunities" :key="item.id" :opportunity="item"
+                :return-query="queryState" />
             </div>
             <div v-else class="empty-state">
               <span class="empty-icon" aria-hidden="true">⌕</span>
               <h2>No opportunities found</h2>
               <p>Try broadening your search or removing a filter.</p>
-              <button v-if="hasAnyFilter" class="button button-primary" type="button" @click="clearEverything">Clear search and filters</button>
+              <button v-if="hasAnyFilter" class="button button-primary" type="button" @click="clearEverything">Clear
+                search and filters</button>
             </div>
 
-            <nav v-if="!error && requestStatus === 'success' && filtered.length > pageSize" class="pagination" aria-label="Results pages">
-              <button type="button" :disabled="page === 1" aria-label="Previous page" @click="goToPage(page - 1)">←</button>
-              <button v-for="number in pageCount" :key="number" type="button" :class="{ active: number === page }" :aria-current="number === page ? 'page' : undefined" @click="goToPage(number)">{{ number }}</button>
-              <button type="button" :disabled="page === pageCount" aria-label="Next page" @click="goToPage(page + 1)">→</button>
+            <nav v-if="!error && requestStatus === 'success' && filtered.length > pageSize" class="pagination"
+              aria-label="Results pages">
+              <button type="button" :disabled="page === 1" aria-label="Previous page"
+                @click="goToPage(page - 1)">←</button>
+              <button v-for="number in pageCount" :key="number" type="button" :class="{ active: number === page }"
+                :aria-current="number === page ? 'page' : undefined" @click="goToPage(number)">{{ number }}</button>
+              <button type="button" :disabled="page === pageCount" aria-label="Next page"
+                @click="goToPage(page + 1)">→</button>
             </nav>
           </div>
         </div>
@@ -263,26 +265,17 @@ watch(pageCount, (count) => {
 
     <div v-if="mobileFiltersOpen" class="drawer-backdrop" role="presentation" @click.self="mobileFiltersOpen = false">
       <aside class="filter-drawer" role="dialog" aria-modal="true" aria-label="Filter opportunities">
-        <button class="drawer-close" type="button" aria-label="Close filters" @click="mobileFiltersOpen = false">×</button>
-        <OpportunityFilters
-          :authorities="authorities"
-          :selected-authorities="selectedAuthorities"
-          @toggle-authority="toggleAuthority"
-          :selected-jurisdictions="selectedJurisdictions"
-          :selected-categories="selectedCategories"
-          :selected-statuses="selectedStatuses"
-          :selected-access="selectedAccess"
-          :deadline-from="deadlineDraft.from"
-          :deadline-to="deadlineDraft.to"
-          :deadline-error="deadlineError"
-          @update-deadline="updateDeadlineRange"
-          @toggle-jurisdiction="toggleJurisdiction"
-          @toggle-category="toggleCategory"
-          @toggle-status="toggleStatus"
-          @toggle-access="toggleAccess"
-          @clear="clearFilters"
-        />
-        <button class="button button-primary drawer-apply" type="button" @click="mobileFiltersOpen = false">Show {{ filtered.length }} results</button>
+        <button class="drawer-close" type="button" aria-label="Close filters"
+          @click="mobileFiltersOpen = false">×</button>
+        <OpportunityFilters :authorities="authorities" :selected-authorities="selectedAuthorities"
+          @toggle-authority="toggleAuthority" :selected-jurisdictions="selectedJurisdictions"
+          :selected-categories="selectedCategories" :selected-statuses="selectedStatuses"
+          :selected-access="selectedAccess" :deadline-from="deadlineDraft.from" :deadline-to="deadlineDraft.to"
+          :deadline-error="deadlineError" @update-deadline="updateDeadlineRange"
+          @toggle-jurisdiction="toggleJurisdiction" @toggle-category="toggleCategory" @toggle-status="toggleStatus"
+          @toggle-access="toggleAccess" @clear="clearFilters" />
+        <button class="button button-primary drawer-apply" type="button" @click="mobileFiltersOpen = false">Show {{
+          filtered.length }} results</button>
       </aside>
     </div>
   </div>
