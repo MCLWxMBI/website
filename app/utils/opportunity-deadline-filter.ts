@@ -1,3 +1,4 @@
+import { isValidCalendarDate, melbourneCalendarDay } from '~~/shared/utils/melbourne-time'
 import { parseOpportunityDeadline } from '~~/shared/utils/opportunity-deadline'
 
 export interface SubmissionDeadlineRange {
@@ -6,12 +7,8 @@ export interface SubmissionDeadlineRange {
 }
 
 const dayMs = 24 * 60 * 60 * 1000
-const datePattern = /^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])-[0-9]{2}$/
-
 function calendarDate(value: string): number | null {
-  if (!datePattern.test(value)) return null
-  const time = Date.parse(`${value}T00:00:00.000Z`)
-  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value ? time : null
+  return isValidCalendarDate(value) ? Date.parse(`${value}T00:00:00.000Z`) : null
 }
 
 export function validateSubmissionDeadlineRange(range: SubmissionDeadlineRange): string | null {
@@ -33,7 +30,10 @@ export function matchesSubmissionDeadline(
   range: SubmissionDeadlineRange
 ): boolean {
   if (validateSubmissionDeadlineRange(range)) return false
-  const deadline = parseOpportunityDeadline(opportunity.submissionDeadline).getTime()
+  const instant = parseOpportunityDeadline(opportunity.submissionDeadline)
+  if (!range.from && !range.to) return true
+  // Compare calendar-day ordinals, so 23- and 25-hour Melbourne days work naturally.
+  const deadline = melbourneCalendarDay(instant)
   const from = range.from ? calendarDate(range.from)! : null
   const to = range.to ? calendarDate(range.to)! + dayMs : null
   return (from === null || deadline >= from) && (to === null || deadline < to)

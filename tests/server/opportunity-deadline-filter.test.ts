@@ -9,18 +9,29 @@ import { makeOpportunity } from '../support/opportunity'
 const matches = (deadline: string, from = '', to = '') => matchesSubmissionDeadline({ submissionDeadline: deadline }, { from, to })
 
 describe('submission deadline range', () => {
+  it('includes both repeated hours and the complete 23/25-hour clock-change days', () => {
+    for (const instant of ['2026-10-03T14:00:00Z', '2026-10-03T16:30:00Z', '2026-10-04T12:59:59.999Z']) {
+      expect(matches(instant, '2026-10-04', '2026-10-04')).toBe(true)
+    }
+    expect(matches('2026-10-03T13:59:59.999Z', '2026-10-04', '2026-10-04')).toBe(false)
+    expect(matches('2026-10-04T13:00:00Z', '2026-10-04', '2026-10-04')).toBe(false)
+    for (const instant of ['2027-04-03T13:00:00Z', '2027-04-03T15:30:00Z', '2027-04-03T16:30:00Z', '2027-04-04T13:59:59.999Z']) {
+      expect(matches(instant, '2027-04-04', '2027-04-04')).toBe(true)
+    }
+    expect(matches('2027-04-04T14:00:00Z', '2027-04-04', '2027-04-04')).toBe(false)
+  })
   it('supports no bounds and either bound independently', () => {
     expect(matches('2026-11')).toBe(true)
-    expect(matches('2026-11-05T23:59:59Z', '2026-11-06')).toBe(false)
-    expect(matches('2026-11-06T00:00:00Z', '2026-11-06')).toBe(true)
-    expect(matches('2026-11-06T23:59:59.999Z', '', '2026-11-06')).toBe(true)
-    expect(matches('2026-11-07T00:00:00Z', '', '2026-11-06')).toBe(false)
+    expect(matches('2026-11-05T12:59:59Z', '2026-11-06')).toBe(false)
+    expect(matches('2026-11-05T13:00:00Z', '2026-11-06')).toBe(true)
+    expect(matches('2026-11-06T12:59:59.999Z', '', '2026-11-06')).toBe(true)
+    expect(matches('2026-11-06T13:00:00Z', '', '2026-11-06')).toBe(false)
   })
-  it('includes the complete UTC day when both bounds are equal', () => {
-    for (const deadline of ['2026-11-06T00:00:00Z', '2026-11-06T12:30:00Z', '2026-11-06T23:59:59.999Z']) {
+  it('includes the complete Melbourne day when both bounds are equal', () => {
+    for (const deadline of ['2026-11-05T13:00:00Z', '2026-11-06T12:30:00Z', '2026-11-06T12:59:59.999Z']) {
       expect(matches(deadline, '2026-11-06', '2026-11-06')).toBe(true)
     }
-    expect(matches('2026-11-05T23:59:59.999Z', '2026-11-06', '2026-11-06')).toBe(false)
+    expect(matches('2026-11-05T12:59:59.999Z', '2026-11-06', '2026-11-06')).toBe(false)
     expect(matches('2026-11-07T00:00:00Z', '2026-11-06', '2026-11-06')).toBe(false)
   })
   it('uses the first day for month-only deadlines', () => {
@@ -30,18 +41,19 @@ describe('submission deadline range', () => {
     expect(matches('2026-12', '2026-11-01', '2026-11-30')).toBe(false)
   })
   it('handles leap days, year rollover, and supported year limits', () => {
-    expect(matches('2024-02-29T23:59:59Z', '2024-02-29', '2024-02-29')).toBe(true)
-    expect(matches('2024-03-01T00:00:00Z', '2024-02-29', '2024-02-29')).toBe(false)
+    expect(matches('2024-02-29T12:59:59Z', '2024-02-29', '2024-02-29')).toBe(true)
+    expect(matches('2024-02-29T13:00:00Z', '2024-02-29', '2024-02-29')).toBe(false)
     expect(matches('2027-01', '2026-12-31', '2027-01-01')).toBe(true)
     expect(matches('0001-01', '0001-01-01', '0001-01-01')).toBe(true)
     expect(matches('0099-12-31T12:00:00Z', '0099-12-31', '0099-12-31')).toBe(true)
-    expect(matches('9999-12-31T23:59:59.999Z', '', '9999-12-31')).toBe(true)
+    expect(matches('9999-12-31T23:59:59.999Z', '', '9999-12-31')).toBe(false)
+    expect(matches('9999-12-31T12:59:59.999Z', '', '9999-12-31')).toBe(true)
   })
   it('does not reinterpret bounds in the browser timezone', () => {
-    vi.stubEnv('TZ', 'Australia/Sydney')
+    vi.stubEnv('TZ', 'America/Los_Angeles')
     try {
-      expect(matches('2026-11-05T23:59:59Z', '2026-11-06')).toBe(false)
-      expect(matches('2026-11-06T23:59:59Z', '', '2026-11-06')).toBe(true)
+      expect(matches('2026-11-05T12:59:59Z', '2026-11-06')).toBe(false)
+      expect(matches('2026-11-06T12:59:59Z', '', '2026-11-06')).toBe(true)
     } finally { vi.unstubAllEnvs() }
   })
   it.each(['2026-02-29', '2026-02-30', '2026-13-01', '2026-00-01', '2026-11-00', '2026-11-31', '0000-01-01', '10000-01-01', '2026-11', '2026-1-01', ' 2026-11-01', '2026-11-01T00:00:00Z'])('rejects an invalid calendar bound %s', date => {

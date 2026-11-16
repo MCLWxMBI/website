@@ -66,7 +66,7 @@ describe('manual opportunity validation', () => {
 function filledDraft() {
   return { ...newOpportunityDraft(), title: 'Manual consultation', sourceUrl: 'https://example.gov.au/manual', sourceOrg: 'Authority',
     jurisdiction: 'Victoria' as const, sourceIndexId: '1', paragraphs: [{ key: 1, text: 'First paragraph.' }],
-    categories: ['Climate change' as const], deadlineDateTime: '2027-11-06T17:00' }
+    categories: ['Climate change' as const], deadlineDate: '2027-11-06', deadlineTime: '17:00' }
 }
 describe('creation form payloads', () => {
   it('submits an existing source ID without trusting its displayed organisation name', () => {
@@ -79,9 +79,9 @@ describe('creation form payloads', () => {
     expect(buildCreateOpportunity({ ...draft, newSourceIndexUrl: 'https://example.gov.au/consultations' }).organisation)
       .toEqual({ newSource: { name: 'Authority', indexUrl: 'https://example.gov.au/consultations' } })
   })
-  it('converts explicitly UTC date inputs without applying the browser timezone', () => {
-    expect(buildCreateOpportunity({ ...filledDraft(), startDate: '2027-10-01T12:30' })).toMatchObject({
-      startDate: '2027-10-01T12:30:00.000Z', submissionDeadline: '2027-11-06T17:00:00.000Z'
+  it('converts Melbourne inputs to UTC without applying the browser timezone', () => {
+    expect(buildCreateOpportunity({ ...filledDraft(), startDate: '2027-10-01', startTime: '12:30' })).toMatchObject({
+      startDate: '2027-10-01T02:30:00.000Z', submissionDeadline: '2027-11-06T06:00:00.000Z'
     })
   })
   it('keeps month-only precision and paragraph order', () => {
@@ -98,6 +98,6 @@ describe('creation form payloads', () => {
     expect(() => buildCreateOpportunity({ ...filledDraft(), locationEnabled: true, locationLabel: 'Place', latitude: '', longitude: '0' })).toThrow('both')
   })
   it('rejects invalid calendar inputs instead of rolling them into another month', () => {
-    expect(() => buildCreateOpportunity({ ...filledDraft(), deadlineDateTime: '2027-02-30T17:00' })).toThrow('valid UTC')
+    expect(() => buildCreateOpportunity({ ...filledDraft(), deadlineDate: '2027-02-30', deadlineTime: '17:00' })).toThrow('valid date')
   })
 })

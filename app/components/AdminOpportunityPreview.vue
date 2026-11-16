@@ -2,7 +2,7 @@
 import type { OpportunityLocation } from '~~/shared/types/opportunity'
 import type { CreateOpportunityRequest } from '~~/shared/types/admin-opportunity'
 import { toOpportunity } from '~~/shared/utils/opportunity'
-import { formatOpportunityDate } from '~~/shared/utils/opportunity-deadline'
+import { formatOpportunityDateTime } from '~~/shared/utils/opportunity-deadline'
 import { getOpportunityStatus } from '~/utils/opportunity-status'
 import { getOpportunityTagGroups } from '~/utils/opportunity-access'
 const props = defineProps<{ request: Omit<CreateOpportunityRequest, 'location'> & { location?: OpportunityLocation }; notice?: string; organisationName: string; websiteTags: string[]; currentTime: number }>()
@@ -23,9 +23,10 @@ const tags = computed(() => getOpportunityTagGroups(opportunity.value))
     <h3>About this consultation</h3>
     <p v-for="(paragraph, index) in opportunity.fullText" :key="index">{{ paragraph }}</p>
     <dl>
-      <template v-if="opportunity.startDate"><dt>Opens (UTC)</dt><dd>{{ formatOpportunityDate(opportunity.startDate, 'long') }}</dd></template>
-      <dt>Closes (UTC)</dt><dd>{{ formatOpportunityDate(opportunity.submissionDeadline, 'long') }}</dd>
+      <template v-if="opportunity.startDate"><dt>Opens</dt><dd>{{ formatOpportunityDateTime(opportunity.startDate) }}</dd></template>
+      <dt>Closes</dt><dd>{{ formatOpportunityDateTime(opportunity.submissionDeadline) }}</dd>
     </dl>
+    <p v-if="opportunity.submissionDeadline.length === 7">Month-only deadlines close at midnight UTC on the first day of that month.</p>
     <h3>Website features</h3>
     <ul v-if="websiteTags.length"><li v-for="tag in websiteTags" :key="tag">{{ tag }}</li></ul>
     <p v-else>No website features supplied.</p>

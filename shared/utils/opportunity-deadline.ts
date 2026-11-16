@@ -1,3 +1,4 @@
+import { MELBOURNE_TIME_ZONE, formatMelbourneDateTime } from './melbourne-time'
 import type { DeadlinePrecision, Opportunity } from '../types/opportunity'
 
 const monthPattern = /^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$/
@@ -42,8 +43,12 @@ export function formatOpportunityDate(value: string, month: 'short' | 'long' = '
     ...(monthPattern.test(value) ? {} : { day: 'numeric' }),
     month,
     year: 'numeric',
-    timeZone: 'UTC'
+    timeZone: monthPattern.test(value) ? 'UTC' : MELBOURNE_TIME_ZONE
   }).format(parseOpportunityDeadline(value))
+}
+
+export function formatOpportunityDateTime(value: string): string {
+  return monthPattern.test(value) ? formatOpportunityDate(value, 'long') : formatMelbourneDateTime(parseOpportunityDeadline(value).toISOString())
 }
 
 export function sortOpportunitiesByDeadline<T extends Pick<Opportunity, 'id' | 'submissionDeadline'>>(

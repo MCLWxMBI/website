@@ -141,8 +141,10 @@ frontend applies search, filters and pagination. URLs with
 `article_history.deleted = true` are excluded. An empty collection returns `[]`.
 
 The homepage accepts optional `deadlineFrom` and `deadlineTo` query parameters
-in canonical `YYYY-MM-DD` format (years 0001–9999). Bounds are inclusive UTC
-calendar days; the upper bound compares strictly before the next UTC midnight.
+in canonical `YYYY-MM-DD` format (years 0001–9999). Bounds are inclusive Melbourne
+calendar days (Australia/Melbourne), independent of the browser timezone.
+Comparisons use local calendar-day ordinals, so 23/25-hour days and repeated
+hours are included correctly. Stored instants and API responses remain UTC.
 Month-only submission deadlines compare as the first day of their month.
 Missing bounds are unrestricted. Malformed/repeated values or reversed URL
 ranges are ignored as a whole, without changing other filter parameters.
@@ -494,6 +496,23 @@ no-store caching. Writes also require the existing CSRF token.
   consultation URLs, missing selected sources, and conflicting existing history
   source associations return `409`. Duplicate listings also return
   `data.opportunityId`. Database/configuration failures return generic `503`.
+
+The shared create/edit form uses separate local dates and optional times in
+Australia/Melbourne. Blank times default to midnight at the start of the selected
+local date; an entirely absent opening remains null. Times without dates are
+invalid. The form converts to the existing UTC request contract before preview
+and submission, using the selected date's IANA offset. Skipped local times are
+rejected. Repeated times require an explicit first/second occurrence choice.
+Editing reverses that conversion, preserving seconds, milliseconds, and the
+selected occurrence. A local value whose UTC instant falls outside years
+0001–9999 is rejected. No new precision or response field is introduced.
+
+Exact dates on cards use the Melbourne calendar day; exact admin preview/detail
+and public detail values include local time and UTC offset. Month-only displays,
+storage, effective instants, status, and chronological sorting retain their
+existing rules. Time conversion utilities live in shared/utils/melbourne-time.ts.
+Victorian clock-change examples are verified against the
+[Victorian Government schedule](https://business.vic.gov.au/business-information/daylight-saving).
 
 Creation is atomic, locking the selected source then following history-first
 identity locking. It never upserts existing listings. Source tag edits are
