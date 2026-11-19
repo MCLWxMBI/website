@@ -566,6 +566,14 @@ The external scraper must select `website_indexes` rows where `active = TRUE`
 when choosing sources. Disabling affects subsequent source selection; it does
 not cancel a running scrape or remove previously scraped articles.
 
+## Technical handover
+
+The [technical handover PDF](docs/ECHO-technical-handover.pdf) covers the website,
+shared database, scraper integration, key files, APIs, operations, and the seeded
+source directory. Its [editable source and build instructions](docs/technical-handover/README.md)
+are included. Regenerate it with `node scripts/build-technical-handover.mjs` after
+reviewing and updating its pinned inputs.
+
 ## Backend unit tests
 
 `npm run test:unit` runs the Vitest suite once; `npm run test:unit:watch` runs it
